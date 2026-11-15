@@ -1,0 +1,5 @@
+qr_*.png
+_*.js
+*.py
+
+.workbuddy/

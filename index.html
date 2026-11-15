@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<!-- 锁定视口：禁用缩放，禁滚动，适配手机横屏 -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<title>津门治略 · 天津道台沙盘</title>
+<style>
+/* =====================================================================
+ * 基础：仿古简约风格，纯文字+色块，无图片/Canvas/动画，禁用滚动
+ * ===================================================================== */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  font-family: "PingFang SC", "Microsoft YaHei", "SimSun", serif;
+  background: #efe7d3;
+  color: #33291a;
+  line-height: 1.5;
+  /* 禁止页面滚动与拉伸（防止 iOS 橡皮筋与误触滚动） */
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  position: fixed;             /* 在移动端固定视口，禁止滚动 */
+  width: 100%;
+}
+/* 关闭双击/长按选择与点击高亮，防误触 */
+body { -webkit-user-select: none; user-select: none; }
+body.selectable, body.selectable * { -webkit-user-select: text; user-select: text; }
+button, .attr-cell { -webkit-touch-callout: none; }
+
+/* =====================================================================
+ * 竖屏提示（方向检测层）：默认显示，横屏时由 JS + media query 隐藏
+ * 若游戏未开始也显示同一提示容器，由 JS 切换内容
+ * ===================================================================== */
+#orientation-layer {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 40px; background: #efe7d3;
+}
+#orientation-layer .box { max-width: 300px; }
+#orientation-layer h1 { font-size: 28px; margin: 0 0 16px; letter-spacing: 2px; }
+#orientation-layer p { font-size: 16px; color: #7a6a49; }
+
+/* =====================================================================
+ * 主游戏容器：仅在横屏且已开局时显示
+ * 使用固定全屏，Grid 三栏：左属性 | 中行动 | 右弹窗区
+ * 靠 media query (orientation: landscape) + JS 双重保证
+ * ===================================================================== */
+#game {
+  position: fixed; inset: 0; z-index: 1;
+  display: none;             /* 默认隐藏，开局后显示 */
+  grid-template-rows: auto 1fr;
+  gap: 0;
+}
+/* 顶部标题条 */
+#topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 16px; gap: 8px;
+  background: #4a3f2a; color: #f3ecd8;
+  font-size: 14px; flex-wrap: wrap;
+}
+#topbar .t-title { font-size: 17px; font-weight: bold; letter-spacing: 2px; }
+#topbar .t-info { color: #d8cfae; }
+#topbar button { background: #5c4f33; color: #f3ecd8; border: 1px solid #7d6d48; }
+
+/* =====================================================================
+ * 三栏主区：属性 | 行动 | 弹窗区
+ * ===================================================================== */
+#main {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr 1fr;   /* 左略宽放属性 */
+  gap: 10px;
+  padding: 10px;
+  min-height: 0;
+}
+.col {
+  background: #fbf7ea;
+  border: 1px solid #cfc2a1;
+  border-radius: 10px;
+  padding: 12px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.col h2 { font-size: 15px; margin: 0 0 10px; color: #6a5834; border-bottom: 2px solid #e0d4b2; padding-bottom: 6px; }
+
+/* ---------- 左栏 · 属性 ---------- */
+#col-left { overflow-y: auto; }
+.attr-cell {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 7px 4px; border-bottom: 1px dashed #e5dabc;
+  font-size: 14px;
+}
+.attr-cell .k { color: #6a5834; }
+.attr-cell .v { font-weight: bold; font-size: 15px; }
+/* 属性最近变化的方向标记：增益绿 / 减益红 */
+.attr-cell .d { margin-left: 6px; font-size: 12px; min-width: 34px; text-align: right; }
+.d-up   { color: #15803d; }   /* 增益 —— 绿色 */
+.d-down { color: #c0262d; }   /* 减益 —— 红色 */
+.d-none { color: #b5a87f; }
+#game-meta { margin-top: 10px; font-size: 13px; color: #6a5834; border-top: 1px solid #e9e0c4; padding-top: 8px; }
+#game-meta b { color: #33291a; }
+#game-meta .small { color: #9a8a62; }
+
+/* ---------- 中栏 · 行动 ---------- */
+#col-mid { overflow-y: auto; }
+.act-btn {
+  display: block; width: 100%;
+  min-height: 46px;
+  margin: 7px 0; padding: 6px 12px;
+  font-family: inherit; font-size: 14px;
+  text-align: left;
+  background: #fffdf5;
+  color: #33291a;
+  border: 1px solid #9a8a62; border-radius: 8px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.act-btn .lab { font-weight: bold; font-size: 15px; }
+.act-btn .sub { display: block; font-size: 11px; color: #9a8a62; margin-top: 2px; }
+.act-btn:active { background: #3f6d3a; color: #fff; }   /* 触屏按下变色反馈 */
+.act-btn:active .sub { color: #e2efdc; }
+.act-btn:disabled { opacity: .45; cursor: not-allowed; }
+.act-btn:disabled:active { background: #fffdf5; color: #33291a; }
+#ap-note { font-size: 12px; color: #8a7a55; margin-top: 8px; }
+.log { font-size: 12px; color: #6a5834; border-top: 1px dashed #e5dabc; margin-top: 10px; padding-top: 6px; max-height: 130px; overflow-y: auto; }
+.log div { padding: 1px 0; }
+
+/* ---------- 右栏 · 弹窗区 ---------- */
+#col-right { overflow-y: auto; }
+.right-pad { color: #a2966f; font-size: 13px; text-align: center; margin-top: 30%; }
+
+/* =====================================================================
+ * 模态遮罩：弹出时全屏覆盖背景变暗，屏蔽底层按钮误触
+ * 弹窗内容在右栏（横排时偏右），但为保证清晰与触控合理，居中于遮罩
+ * ===================================================================== */
+.modal-mask {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(30, 22, 8, .72);
+  display: none; align-items: center; justify-content: flex-end;
+  padding: 12px;
+}
+.modal {
+  width: 100%; max-width: 420px; max-height: 92%;
+  margin-left: auto;                 /* 右对齐，贴合"右栏弹窗"设计 */
+  background: #fbf7ea;
+  border: 2px solid #6a5834; border-radius: 12px;
+  padding: 16px 18px;
+  overflow-y: auto;
+  box-shadow: 0 8px 30px rgba(0,0,0,.45);
+}
+.modal h3 { margin: 0 0 8px; font-size: 18px; color: #4a3b1d; }
+.modal .desc { font-size: 14px; color: #5a4a2c; margin: 0 0 12px; }
+.modal .opt {
+  display: block; width: 100%; min-height: 46px;
+  margin: 8px 0; padding: 8px 12px;
+  font-family: inherit; font-size: 14px; text-align: left;
+  background: #fffdf5; color: #33291a;
+  border: 1px solid #9a8a62; border-radius: 8px; cursor: pointer;
+  transition: background .15s;
+}
+.modal .opt:active { background: #3f6d3a; color: #fff; }
+.modal .opt .fx { display: block; font-size: 11px; color: #9a8a62; margin-top: 2px; }
+.modal .actions { margin-top: 12px; display: flex; gap: 10px; }
+
+/* =====================================================================
+ * 横屏基础样式保证：竖屏强制提示，横屏显示游戏容器
+ * JS 负责在竖/横之间切换 orientation-layer 的显示与 #game 的可见性
+ * 这里用媒体查询做无 JS 时的兜底（默认竖屏提示、横屏可显示）
+ * ===================================================================== */
+@media (orientation: portrait) {
+  #game { display: none !important; }
+  #orientation-layer { display: flex; }
+}
+</style>
+</head>
+<body>
+
+<!-- ======================= 竖屏提示层 ======================= -->
+<div id="orientation-layer">
+  <div class="box">
+    <h1>津 门 治 略</h1>
+    <p id="orientation-text">请将手机横向放置游玩</p>
+    <p style="font-size:13px;color:#9a8a62;">（本游戏为横屏回合制沙盘）</p>
+  </div>
+</div>
+
+<!-- ======================= 游戏主界面 ======================= -->
+<div id="game">
+  <div id="topbar">
+    <span class="t-title">津门治略</span>
+    <span class="t-info" id="top-date"></span>
+    <button id="btn-save-home">存 档 · 首页</button>
+  </div>
+  <div id="main">
+    <!-- 左栏：属性 -->
+    <div class="col" id="col-left">
+      <h2>属性</h2>
+      <div id="attr-list"></div>
+      <div id="game-meta">
+        <div>年号：<b id="m-year"></b></div>
+        <div>月份：<b id="m-month"></b> ｜ 回合：<b id="m-round"></b></div>
+        <div>剩余行动点：<b id="m-ap"></b> / 4</div>
+        <div class="small">增益<span class="d-up"> 绿</span> ｜ 减益<span class="d-down"> 红</span></div>
+      </div>
+    </div>
+    <!-- 中栏：行动 -->
+    <div class="col" id="col-mid">
+      <h2>官署行动</h2>
+      <div id="action-list"></div>
+      <div id="ap-note"></div>
+      <div class="log" id="log"></div>
+    </div>
+    <!-- 右栏：弹窗区（事件/结局由浮层呈现） -->
+    <div class="col" id="col-right">
+      <h2>津城政报</h2>
+      <div class="right-pad" id="right-pad">横屏政务沙盘<br>回合事件于此呈现</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= 事件弹窗（浮层，右对齐） ======================= -->
+<div class="modal-mask" id="event-mask">
+  <div class="modal">
+    <h3 id="event-title"></h3>
+    <p class="desc" id="event-desc"></p>
+    <div id="event-options"></div>
+  </div>
+</div>
+
+<!-- ======================= 结局弹窗（浮层，右对齐） ======================= -->
+<div class="modal-mask" id="end-mask">
+  <div class="modal">
+    <h3 id="end-title"></h3>
+    <p class="desc" id="end-desc"></p>
+    <div class="actions">
+      <button class="opt" id="end-restart" style="width:auto;">重新开局</button>
+      <button class="opt" id="end-home" style="width:auto;">返回首页</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+ * 《津门治略》 —— 横屏移动端回合制沙盘（单文件，GitHub Pages 可用）
+ * ---------------------------------------------------------------------
+ * 玩法数据与既定设定完全一致（属性/行动/事件/结局/存档逻辑）。
+ * 本文件仅针对"横屏手机优先"重写布局与触控适配。
+ * 模块：
+ *   0. 工具与存储
+ *   1. 属性 / 行动 / 事件 / 结局 元数据
+ *   2. 状态管理（初始值、上限、存档读档）
+ *   3. 屏幕方向检测与触控初始化
+ *   4. 渲染（属性 / 行动 / 日志 / 弹窗）
+ *   5. 游戏流程（行动 → 回合推进 → 事件 → 结局）
+ * ===================================================================== */
+
+/* =====================================================================
+ * 0. 工具与存储
+ * ===================================================================== */
+function $(id) { return document.getElementById(id); }
+
+var SAVE_KEY = "jinmen_save_v1";
+
+function saveGame(state) {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, state: state }));
+    return true;
+  } catch (e) { return false; }
+}
+function loadGame() {
+  try {
+    var raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    var data = JSON.parse(raw);
+    if (!data || !data.state) return null;
+    var s = data.state;
+    // 兼容校验：补齐缺失字段
+    for (var k in ATTRS) { if (typeof s[k] !== "number") s[k] = ATTRS[k].ini; }
+    if (!s.history || typeof s.history !== "object") s.history = [];
+    if (typeof s.ap !== "number") s.ap = 4;
+    return s;
+  } catch (e) { return null; }
+}
+function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
+
+/* 修改属性（整表），并记录每个属性的最近变化量供面板显示 */
+function applyEffects(state, effect, lastDiff) {
+  for (var k in effect) {
+    if (!(k in ATTRS)) continue;
+    var old = state[k];
+    state[k] += effect[k];
+    if (state[k] > ATTRS[k].max) state[k] = ATTRS[k].max; // 只截上限，允许为负
+    // 记录最近一次变化量（本次实际净变化，考虑上限截断）
+    if (lastDiff) lastDiff[k] = state[k] - old;
+  }
+}
+
+/* =====================================================================
+ * 1. 元数据
+ * ===================================================================== */
+/* 属性定义。库银/仓粮为库存型上限9999；其余比率型上限100。
+ * lastDiff：渲染时显示"最近一次变化"，初始为 0 */
+var ATTRS = {
+  "kuyin":     { name: "库银",     unit: "两", max: 9999, ini: 750 },
+  "cangliang": { name: "仓粮",     unit: "石", max: 9999, ini: 500 },
+  "minwang":   { name: "民望",     unit: "",   max: 100,  ini: 55 },
+  "zhian":     { name: "津门治安", unit: "",   max: 100,  ini: 52 },
+  "hefang":    { name: "河防稳固度", unit: "", max: 100, ini: 42 },
+  "yangwu":    { name: "洋务进度", unit: "",   max: 100,  ini: 18 },
+  "zujie":     { name: "租界交涉值", unit: "", max: 100, ini: 50 },
+  "qinglian":  { name: "官风清廉度", unit: "", max: 100, ini: 55 }
+};
+
+var MONTHS = ["正月","二月","三月","四月","五月","六月","七月","八月","九月","十月","十一月","十二月"];
+var YEARS  = ["光绪二十二年","光绪二十三年","光绪二十四年","光绪二十五年","光绪二十六年"];
+
+/* 行动：8 项，均消耗 1 行动点 */
+var ACTIONS = [
+  { id: "shengtang", label: "升堂理事", ap: 1,
+    sub: "库银-30 · 治安+2 · 民望+1",
+    effect: { zhian: 2, minwang: 1, kuyin: -30 } },
+  { id: "xuncha", label: "巡查河堤", ap: 1,
+    sub: "库银-80 · 河防+4",
+    effect: { hefang: 4, kuyin: -80 } },
+  { id: "yanshang", label: "召见盐商商会", ap: 1,
+    sub: "库银+150 · 清廉-2",
+    effect: { kuyin: 150, qinglian: -2 } },
+  { id: "kaohe", label: "考核官吏", ap: 1,
+    sub: "库银-20 · 清廉+3",
+    effect: { qinglian: 3, kuyin: -20 } },
+  { id: "kaicang", label: "开仓赈济", ap: 1,
+    sub: "仓粮-150 · 民望+4 · 治安+2",
+    effect: { cangliang: -150, minwang: 4, zhian: 2 } },
+  { id: "yangwu", label: "兴办洋务", ap: 1,
+    sub: "库银-200 · 洋务+3",
+    effect: { kuyin: -200, yangwu: 3 } },
+  { id: "bukuai", label: "招募捕快", ap: 1,
+    sub: "库银-100 · 治安+4",
+    effect: { kuyin: -100, zhian: 4 } },
+  { id: "xiuzheng", label: "休整整月", ap: 1,
+    sub: "无数值变化，推进月份",
+    effect: {} }
+];
+var ACTION_BY_ID = {};
+ACTIONS.forEach(function (a) { ACTION_BY_ID[a.id] = a; });
+
+/* 事件：20 项（含连锁前置） */
+var EVENTS = [
+  { id:"TJ001", title:"海河伏汛告警",
+    c:function(s,h){ return s.month>=6&&s.month<=8&&s.hefang<=70; },
+    desc:"连日大雨，海河水位骤涨，三岔河口多处堤岸渗漏，沿河商民惶恐。",
+    opts:[
+      { t:"拨款购料，连夜督修险堤", f:"库银-800·河防+12·民望+3", e:{kuyin:-800,hefang:12,minwang:3} },
+      { t:"征调沿河民夫抢护", f:"仓粮-200·河防+8·民望-5·治安-2", e:{cangliang:-200,hefang:8,minwang:-5,zhian:-2} },
+      { t:"仅加固主城附近堤段", f:"库银-300·河防+4·民望-3", e:{kuyin:-300,hefang:4,minwang:-3} } ] },
+  { id:"TJ002", title:"漕船滞留三岔口",
+    c:function(s){ return s.month>=4&&s.month<=6&&s.cangliang<=4000; },
+    desc:"漕船因河道浅涩滞留津门，押运官员催促接驳，码头脚夫与船户争执不休。",
+    opts:[
+      { t:"雇船驳运，清理浅滩", f:"库银-500·仓粮+800·河防+2", e:{kuyin:-500,cangliang:800,hefang:2} },
+      { t:"强令船户限期赶运", f:"仓粮+500·民望-3·治安-3", e:{cangliang:500,minwang:-3,zhian:-3} },
+      { t:"准盐商船只协助转运", f:"库银-200·仓粮+600·清廉-2", e:{kuyin:-200,cangliang:600,qinglian:-2} } ] },
+  { id:"TJ003", title:"盐商献银求引",
+    c:function(s){ return s.kuyin<=5000&&s.qinglian<=75; },
+    desc:"数名盐商联名求增盐引，暗示愿以重银捐助公库，幕后另有请托。",
+    opts:[
+      { t:"驳回请托，按旧章办理", f:"清廉+4·民望+1", e:{qinglian:4,minwang:1} },
+      { t:"私下受银，允增盐引", f:"库银+1200·清廉-7·民望-2", e:{kuyin:1200,qinglian:-7,minwang:-2} },
+      { t:"公开竞标，捐银入库", f:"库银+700·清廉+2·治安+1", e:{kuyin:700,qinglian:2,zhian:1} } ] },
+  { id:"TJ004", title:"脚行争夺码头",
+    c:function(s){ return s.zhian<=65; },
+    desc:"两家脚行为争夺紫竹林码头装卸生意聚众斗殴，商铺货物积压，漕运受阻。",
+    opts:[
+      { t:"派差役弹压，拘拿首恶", f:"库银-200·治安+7·民望-2", e:{kuyin:-200,zhian:7,minwang:-2} },
+      { t:"请乡绅出面调停分利", f:"库银-100·治安+4·民望+2", e:{kuyin:-100,zhian:4,minwang:2} },
+      { t:"重订轮值章程，按日分埠", f:"库银-150·治安+5·清廉+2", e:{kuyin:-150,zhian:5,qinglian:2} } ] },
+  { id:"TJ005", title:"租界修路越界",
+    c:function(s){ return s.zujie<=60&&s.yangwu>=20; },
+    desc:"租界工部局修筑道路时擅自越界，拆动华界民房地基，居民聚集抗议。",
+    opts:[
+      { t:"下令停工，限期退出越界地段", f:"租界-6·民望+4·洋务-2", e:{zujie:-6,minwang:4,yangwu:-2} },
+      { t:"照会领事，会同勘定界址", f:"库银-200·租界+5·民望+1", e:{kuyin:-200,zujie:5,minwang:1} },
+      { t:"准许合修，但要求补偿住户", f:"库银+300·洋务+4·租界+2·民望-2", e:{kuyin:300,yangwu:4,zujie:2,minwang:-2} } ] },
+  { id:"TJ006", title:"机器局锅炉爆裂",
+    c:function(s){ return s.yangwu>=30; },
+    desc:"天津机器局一台旧锅炉爆裂，工匠受伤，厂房停工，局中采购积弊亦遭议论。",
+    opts:[
+      { t:"拨款修缮，并抚恤受伤工匠", f:"库银-1000·洋务+4·民望+2", e:{kuyin:-1000,yangwu:4,minwang:2} },
+      { t:"减省材料，赶工复产", f:"库银-300·洋务+6·清廉-4·治安-2", e:{kuyin:-300,yangwu:6,qinglian:-4,zhian:-2} },
+      { t:"停工查验，撤换采办委员", f:"洋务-3·清廉+5·民望+1", e:{yangwu:-3,qinglian:5,minwang:1} } ] },
+  { id:"TJ007", title:"老城厢庙会时疫",
+    c:function(s){ return (s.month===2||s.month===3||s.month===8||s.month===9)&&s.minwang<=75; },
+    desc:"庙会期间人流拥挤，老城厢突发时疫，药铺供不应求，坊间流言四起。",
+    opts:[
+      { t:"设局施药，分区隔离病患", f:"库银-600·仓粮-200·民望+6·治安+2", e:{kuyin:-600,cangliang:-200,minwang:6,zhian:2} },
+      { t:"封闭庙市，禁止聚集", f:"库银-100·民望-4·治安+4", e:{kuyin:-100,minwang:-4,zhian:4} },
+      { t:"委托乡绅施诊散粮", f:"仓粮-400·民望+3·清廉-2", e:{cangliang:-400,minwang:3,qinglian:-2} } ] },
+  { id:"TJ008", title:"流民聚集北仓",
+    c:function(s){ return s.month>=10&&s.month<=12&&(s.cangliang<=3000||s.minwang<=50); },
+    desc:"周边灾区流民陆续抵达北仓，沿途乞食，商户担忧治安，纷纷请求官府处置。",
+    opts:[
+      { t:"开设粥厂，登记安置", f:"仓粮-800·民望+7·治安+4", e:{cangliang:-800,minwang:7,zhian:4} },
+      { t:"以工代赈，募流民修堤", f:"库银-500·仓粮-400·河防+7·治安+3", e:{kuyin:-500,cangliang:-400,hefang:7,zhian:3} },
+      { t:"派役驱离县境", f:"民望-8·治安-3·清廉-2", e:{minwang:-8,zhian:-3,qinglian:-2} } ] },
+  { id:"TJ009", title:"书吏侵蚀施药款",
+    c:function(s,h){ return hasChosen(h,"TJ007",0)&&s.qinglian<=70; },
+    desc:"疫区账目出现重复领款，数名书吏被揭发虚报药价，商民要求追查赈务。",
+    opts:[
+      { t:"封存账册，彻查经手人员", f:"库银-300·清廉+8·民望+3·治安-1", e:{kuyin:-300,qinglian:8,minwang:3,zhian:-1} },
+      { t:"责令赔补，不予深究", f:"库银+400·清廉+2·民望+1", e:{kuyin:400,qinglian:2,minwang:1} },
+      { t:"压下舆情，维持原账", f:"清廉-8·民望-4·治安-2", e:{qinglian:-8,minwang:-4,zhian:-2} } ] },
+  { id:"TJ010", title:"乡绅捐筑减水坝",
+    c:function(s,h){ return hasEvent(h,"TJ001")&&s.hefang<=70; },
+    desc:"汛后乡绅愿捐资修建减水坝，但要求参与河道工程，并优先保护各自田庄。",
+    opts:[
+      { t:"接受捐银，工程账目张榜公示", f:"库银+600·河防+8·清廉+2·民望+2", e:{kuyin:600,hefang:8,qinglian:2,minwang:2} },
+      { t:"官绅共管，按田亩分摊工料", f:"库银+300·河防+10·清廉-2·民望+1", e:{kuyin:300,hefang:10,qinglian:-2,minwang:1} },
+      { t:"谢绝捐银，仍由官府独办", f:"清廉+3·河防-2·民望-2", e:{qinglian:3,hefang:-2,minwang:-2} } ] },
+  { id:"TJ011", title:"海河凌汛阻航",
+    c:function(s){ return (s.month===12||s.month<=2)&&s.hefang<=75; },
+    desc:"海河浮冰壅塞河道，多处渡船停航，冰层挤压堤岸，沿岸商户请求官府疏浚。",
+    opts:[
+      { t:"雇工凿冰，巡查险段", f:"库银-400·河防+8·治安+1", e:{kuyin:-400,hefang:8,zhian:1} },
+      { t:"暂行封渡，待冰层自解", f:"民望-3·治安+3·河防+2", e:{minwang:-3,zhian:3,hefang:2} },
+      { t:"强令船户破冰通航", f:"民望-5·河防-6·治安-2", e:{minwang:-5,hefang:-6,zhian:-2} } ] },
+  { id:"TJ012", title:"漕仓发现霉粮",
+    c:function(s){ return s.month>=6&&s.month<=8&&s.cangliang>=5000; },
+    desc:"连日潮湿，北仓部分漕粮发热霉变，仓吏企图隐瞒，粮户担心波及全仓。",
+    opts:[
+      { t:"开仓翻晒，剔除霉粮", f:"库银-300·仓粮-200·清廉+2", e:{kuyin:-300,cangliang:-200,qinglian:2} },
+      { t:"将受损粮食折价平粜", f:"库银+300·仓粮-600·民望+3", e:{kuyin:300,cangliang:-600,minwang:3} },
+      { t:"掺入好粮继续收储", f:"库银+200·清廉-8·民望-5", e:{kuyin:200,qinglian:-8,minwang:-5} } ] },
+  { id:"TJ013", title:"盐坨夜起大火",
+    c:function(s){ return s.qinglian<=65||s.zhian<=60; },
+    desc:"河东盐坨深夜失火，邻近民居受到波及，有盐商趁乱转移货物，围观者众多。",
+    opts:[
+      { t:"调集水龙救火，安置受灾住户", f:"库银-500·治安+4·民望+3", e:{kuyin:-500,zhian:4,minwang:3} },
+      { t:"先保官盐，令居民自行扑救", f:"库银-200·治安+2·民望-4", e:{kuyin:-200,zhian:2,minwang:-4} },
+      { t:"借火后盘点清查盐商旧账", f:"库银+300·清廉+5·治安-2", e:{kuyin:300,qinglian:5,zhian:-2} } ] },
+  { id:"TJ014", title:"洋船碰损民船",
+    c:function(s){ return s.zujie<=70; },
+    desc:"租界洋船在海河掉头时撞沉两艘民船，船户要求赔偿，洋船管事拒绝认责。",
+    opts:[
+      { t:"照会领事，据约索偿", f:"库银-100·租界+4·民望+3", e:{kuyin:-100,zujie:4,minwang:3} },
+      { t:"扣押洋船，勒令赔偿", f:"租界-7·治安-2·民望+4", e:{zujie:-7,zhian:-2,minwang:4} },
+      { t:"邀商会与船行共同调解", f:"租界+2·民望+1·清廉+1", e:{zujie:2,minwang:1,qinglian:1} } ] },
+  { id:"TJ015", title:"机器局招考学徒",
+    c:function(s){ return s.yangwu>=25; },
+    desc:"机器局工匠不足，总办请求招考学徒，城中贫寒子弟与官吏亲属争相投递名帖。",
+    opts:[
+      { t:"公开招考，录用者由公库供膳", f:"库银-600·洋务+6·民望+2", e:{kuyin:-600,yangwu:6,minwang:2} },
+      { t:"劝商绅捐办，按捐资保荐名额", f:"库银+200·洋务+4·清廉-2", e:{kuyin:200,yangwu:4,qinglian:-2} },
+      { t:"优先录用官吏子弟", f:"洋务+3·民望-4·清廉-3", e:{yangwu:3,minwang:-4,qinglian:-3} } ] },
+  { id:"TJ016", title:"电杆逼近妈祖庙",
+    c:function(s){ return s.yangwu>=40&&s.minwang<=70; },
+    desc:"电报线路规划经过老城厢妈祖庙前，庙祝与商户认为有碍风水，聚集阻拦立杆。",
+    opts:[
+      { t:"改道绕行，避开庙前街巷", f:"库银-400·洋务+2·民望+3", e:{kuyin:-400,yangwu:2,minwang:3} },
+      { t:"请乡绅解说线路，只移庙前两杆", f:"库银-100·洋务+4·民望+1", e:{kuyin:-100,yangwu:4,minwang:1} },
+      { t:"派役驱散众人，按原图施工", f:"洋务+7·民望-6·治安-3", e:{yangwu:7,minwang:-6,zhian:-3} } ] },
+  { id:"TJ017", title:"河工民夫逃散",
+    c:function(s,h){ return hasChosen(h,"TJ001",1)&&s.minwang<=55; },
+    desc:"此前征调的民夫因工食不足陆续逃散，尚未完工的堤段无人守护，沿河村庄怨声渐起。",
+    opts:[
+      { t:"补发工食，准许轮班归家", f:"库银-400·仓粮-300·民望+4·河防+3", e:{kuyin:-400,cangliang:-300,minwang:4,hefang:3} },
+      { t:"拘拿逃夫，连坐督促回乡", f:"治安+2·民望-5·清廉-2", e:{zhian:2,minwang:-5,qinglian:-2} },
+      { t:"改雇脚行工人接续抢修", f:"库银-600·河防+5·治安+2", e:{kuyin:-600,hefang:5,zhian:2} } ] },
+  { id:"TJ018", title:"胥吏包庇赌局",
+    c:function(s){ return s.qinglian<=60&&s.zhian<=65; },
+    desc:"南市赌局斗殴频发，差役查获的账簿显示多名胥吏按月收受规银。",
+    opts:[
+      { t:"按账查拿，封禁涉事赌局", f:"库银+200·清廉+6·治安+6", e:{kuyin:200,qinglian:6,zhian:6} },
+      { t:"只办赌头，不究署内人员", f:"库银+400·治安+2·清廉-5", e:{kuyin:400,zhian:2,qinglian:-5} },
+      { t:"责成商会与乡绅协助巡查", f:"库银-100·治安+3·清廉+1·民望+1", e:{kuyin:-100,zhian:3,qinglian:1,minwang:1} } ] },
+  { id:"TJ019", title:"驻津营勇催饷",
+    c:function(s){ return s.kuyin<=3500&&s.zhian<=60; },
+    desc:"驻津营勇数月未领足饷，部分兵丁聚集营门喧哗，附近商铺纷纷闭门。",
+    opts:[
+      { t:"足额补发，核查空额冒饷", f:"库银-900·治安+6·清廉+2", e:{kuyin:-900,zhian:6,qinglian:2} },
+      { t:"先发半饷，余款下月补足", f:"库银-400·治安+2·民望-1", e:{kuyin:-400,zhian:2,minwang:-1} },
+      { t:"向盐商暂借饷银应急", f:"库银+400·治安+4·清廉-4·民望-2", e:{kuyin:400,zhian:4,qinglian:-4,minwang:-2} } ] },
+  { id:"TJ020", title:"善堂争领疫后赈务",
+    c:function(s,h){ return hasEvent(h,"TJ007")&&s.minwang<=70; },
+    desc:"时疫稍平，城中数家善堂争相请求承办善后赈务，并互相指认账目不清。",
+    opts:[
+      { t:"核验各堂账册，再按实效拨款", f:"库银-200·民望+4·清廉+3", e:{kuyin:-200,minwang:4,qinglian:3} },
+      { t:"交由声望最高的善堂独办", f:"民望+2·清廉-2·治安+1", e:{minwang:2,qinglian:-2,zhian:1} },
+      { t:"划区分办，由官府逐旬抽查", f:"库银-200·仓粮-300·民望+5·治安+2", e:{kuyin:-200,cangliang:-300,minwang:5,zhian:2} } ] }
+];
+
+/* 结局：5 条（原既定设定的占位，可替换） */
+var ENDINGS = [
+  { id:"E1", title:"库银破产 · 亏空难支",
+    c:function(s){ return s.kuyin<=-500; },
+    desc:"库银亏空逾五百两，钱粮无着，诸事停滞。朝廷闻奏震怒，你被革职拿问，一肩担下亏空之罪，津门政事戛然而止。" },
+  { id:"E2", title:"民变 · 城厢失序",
+    c:function(s){ return s.minwang<=15||s.zhian<=15; },
+    desc:"民怨沸腾、治安崩坏，饥民与无赖啸聚，焚署劫库。乱起仓猝，你虽竭力弹压，终究无力回天，津门陷入混乱。" },
+  { id:"E3", title:"吏治崩溃 · 瓜蔓抄",
+    c:function(s){ return s.qinglian<=15; },
+    desc:"官署上下侵蚀成风，贪墨之弊不可收拾。御史参劾，弹章如雪片般飞入京师，你身为道台难辞其咎，被逮入都。" },
+  { id:"E4", title:"洋务大成 · 北洋干城",
+    c:function(s){ return s.yangwu>=80&&s.qinglian>=50; },
+    desc:"机器局、电报、轮船皆井然有序，洋务蒸蒸日上，官风清廉。朝廷嘉许，擢你为督抚大员，津门洋务之兴，全国瞩目。" },
+  { id:"E5", title:"治绩卓著 · 民安物阜",
+    c:function(s){ return s.hefang>=75&&s.minwang>=75&&s.zhian>=70&&s.kuyin>=1000&&s.cangliang>=2500; },
+    desc:"河防稳固、仓廪充实、民望隆盛、治安井然。三年任满，万民遮道相送，你以卓然治绩获召入京，荣升户部侍郎。" }
+];
+
+/* 连锁历史辅助 */
+function hasEvent(h, id) { for (var i=0;i<h.length;i++) if(h[i].id===id) return true; return false; }
+function hasChosen(h, id, idx) { for (var i=0;i<h.length;i++) if(h[i].id===id&&h[i].chosenIndex===idx) return true; return false; }
+
+/* =====================================================================
+ * 2. 状态
+ * ===================================================================== */
+function initialState() {
+  var s = { month: 2, year: 0, round: 1, ap: 4 };
+  for (var k in ATTRS) s[k] = ATTRS[k].ini;
+  s.history = [];
+  return s;
+}
+
+/* =====================================================================
+ * 3. 屏幕方向检测与触控初始化
+ * ===================================================================== */
+var landscape = true; // 当前是否横屏
+function updateOrientation() {
+  landscape = window.innerWidth >= window.innerHeight;
+  var ol = $("orientation-layer");
+  if (landscape) {
+    ol.style.display = "none";
+    // 若已开局则显示游戏
+    if (gameState) { $("game").style.display = "grid"; }
+  } else {
+    ol.style.display = "flex";
+    $("game").style.display = "none";
+    // 竖屏时隐藏所有弹窗，避免误触
+    closeAllModals();
+  }
+}
+
+/* 触控：禁止双击缩放（配合 meta 双保险）、阻止双击/长按高亮选择 */
+function setupTouch() {
+  document.addEventListener("dblclick", function (e) { e.preventDefault(); });
+  // 阻止 iOS 双击缩放与长按菜单
+  document.addEventListener("gesturestart", function (e) { e.preventDefault(); });
+  // 阻止点击时快速聚焦缩放（Safari 老版本）
+  document.addEventListener("touchstart", function () {}, { passive: true });
+}
+/* 禁止页面滚动：pointermove 中被拖出可视区域仍由 overflow hidden + fixed 兜底，
+ * 另监听 touchmove 阻止（因 body 固定，主要防 iOS 橡皮筋） */
+document.addEventListener("touchmove", function (e) {
+  if (e.target && e.target.closest && e.target.closest(".modal, .col")) {
+    // 允许弹窗与栏内部滚动
+    return;
+  }
+  e.preventDefault();
+}, { passive: false });
+
+/* =====================================================================
+ * 4. 渲染
+ * ===================================================================== */
+var gameState = null;
+var endingActive = false;
+var eventChainDepth = 0;
+var lastDiff = {}; // 各属性最近一次变化量，用于面板 +/- 色标
+
+function dateText(s) { return YEARS[s.year] + " " + MONTHS[s.month - 1]; }
+
+function renderTop() {
+  $("top-date").textContent = dateText(gameState);
+  $("m-year").textContent = YEARS[gameState.year];
+  $("m-month").textContent = MONTHS[gameState.month - 1];
+  $("m-round").textContent = gameState.round;
+  $("m-ap").textContent = gameState.ap;
+}
+
+function renderAttrs() {
+  var list = $("attr-list");
+  list.innerHTML = "";
+  Object.keys(ATTRS).forEach(function (k) {
+    var a = ATTRS[k];
+    var cell = document.createElement("div");
+    cell.className = "attr-cell";
+    var kSpan = document.createElement("span");
+    kSpan.className = "k";
+    kSpan.textContent = a.name;
+    var vSpan = document.createElement("span");
+    vSpan.className = "v";
+    vSpan.textContent = gameState[k] + (a.unit ? " " + a.unit : "");
+    if (a.max <= 100) vSpan.textContent += " /" + a.max;
+    // 危险低值直观标红
+    if (dangerLow(k, gameState[k])) vSpan.style.color = "#c0262d";
+    var dSpan = document.createElement("span");
+    dSpan.className = "d";
+    var d = lastDiff[k] || 0;
+    if (d > 0) { dSpan.textContent = "+" + d; dSpan.className += " d-up"; }
+    else if (d < 0) { dSpan.textContent = d; dSpan.className += " d-down"; }
+    else { dSpan.textContent = "—"; dSpan.className += " d-none"; }
+    cell.appendChild(kSpan);
+    var wrap = document.createElement("span");
+    wrap.appendChild(vSpan);
+    wrap.appendChild(dSpan);
+    cell.appendChild(wrap);
+    list.appendChild(cell);
+  });
+}
+function dangerLow(k, v) {
+  var m = { minwang:25, zhian:25, hefang:25, kuyin:0, cangliang:100, yangwu:5, zujie:20, qinglian:20 };
+  return v < (m[k] !== undefined ? m[k] : 0);
+}
+
+function renderActions() {
+  var box = $("action-list");
+  box.innerHTML = "";
+  ACTIONS.forEach(function (a) {
+    var b = document.createElement("button");
+    b.className = "act-btn";
+    b.disabled = gameState.ap < a.ap || endingActive;
+    b.innerHTML = '<span class="lab">' + a.label + '</span><span class="sub">' + a.sub + '</span>';
+    b.addEventListener("click", function () { doAction(a.id); });
+    box.appendChild(b);
+  });
+  $("ap-note").textContent = gameState.ap >= 4
+    ? "本月行动点：4 点可用。"
+    : "本月已用 " + (4 - gameState.ap) + " 点。";
+}
+
+function addLog(msg) {
+  var log = $("log");
+  var div = document.createElement("div");
+  div.textContent = msg;
+  log.insertBefore(div, log.firstChild);
+}
+
+function clearLastDiff() {
+  lastDiff = {};
+  for (var k in ATTRS) lastDiff[k] = 0;
+}
+
+function renderAll() {
+  renderTop();
+  renderAttrs();
+  renderActions();
+}
+
+/* =====================================================================
+ * 5. 游戏流程
+ * ===================================================================== */
+
+/* 开局入口（从竖屏提示层进入） */
+function newGame() {
+  gameState = initialState();
+  endingActive = false;
+  clearLastDiff();
+  $("log").innerHTML = "";
+  addLog("光绪二十二年二月，你奉旨就任天津道台。");
+  $("game").style.display = "grid";
+  updateOrientation(); // 若非横屏则仍显示提示
+  renderAll();
+  autosave();
+}
+
+/* 读档入口 */
+function resumeGame() {
+  var s = loadGame();
+  if (s) {
+    gameState = s;
+    endingActive = false;
+    clearLastDiff();
+    $("log").innerHTML = "";
+    addLog("已读取存档，继续治理津门……");
+    $("game").style.display = "grid";
+    updateOrientation();
+    renderAll();
+    checkEnding();
+  } else {
+    // 无存档：直接开局
+    newGame();
+    addLog("（未检测到存档，已自动开始新局）");
+  }
+}
+
+/* 执行行动 */
+function doAction(actionId) {
+  if (endingActive || !gameState) return;
+  var a = ACTION_BY_ID[actionId];
+  if (!a) return;
+  if (gameState.ap < a.ap) { alert("本回合行动点不足。"); return; }
+
+  gameState.ap -= a.ap;
+  clearLastDiff();
+  applyEffects(gameState, a.effect, lastDiff);
+
+  var parts = [];
+  Object.keys(a.effect).forEach(function (k) {
+    if (!(k in ATTRS)) return;
+    var v = a.effect[k];
+    parts.push(ATTRS[k].name + (v >= 0 ? "+" : "") + v);
+  });
+  var msg = "【" + a.label + "】" + (parts.length ? "　" + parts.join("，") : "");
+  addLog(msg);
+
+  // 行动后判定结局
+  if (checkEnding()) { renderAll(); return; }
+
+  renderAll();
+  autosave();
+
+  if (gameState.ap <= 0) { endRound(); }
+}
+
+/* 回合推进 */
+function endRound() {
+  advanceMonth();
+  gameState.round += 1;
+  gameState.ap = 4;
+  renderAll();
+  addLog("—— " + dateText(gameState) + "，新的一月，重得 4 行动点 ——");
+  autosave();
+
+  if (checkEnding()) return;
+  triggerRandomEvent();
+}
+
+function advanceMonth() {
+  gameState.month += 1;
+  if (gameState.month > 12) {
+    gameState.month = 1;
+    if (gameState.year < YEARS.length - 1) gameState.year += 1;
+  }
+}
+
+/* 事件触发 */
+function eligibleEvents() {
+  var list = [];
+  EVENTS.forEach(function (e) {
+    try { if (e.c(gameState, gameState.history)) list.push(e); } catch (err) {}
+  });
+  return list;
+}
+
+function triggerRandomEvent() {
+  if (endingActive) return;
+  var list = eligibleEvents();
+  if (list.length === 0) return;
+  eventChainDepth = 0;
+  showEventModal(list[Math.floor(Math.random() * list.length)]);
+}
+
+function showEventModal(ev) {
+  $("event-title").textContent = ev.title;
+  $("event-desc").textContent = ev.desc;
+  var box = $("event-options");
+  box.innerHTML = "";
+  ev.opts.forEach(function (opt, idx) {
+    var b = document.createElement("button");
+    b.className = "opt";
+    b.innerHTML = opt.t + '<span class="fx">' + opt.f + '</span>';
+    b.addEventListener("click", function () {
+      clearLastDiff();
+      applyEffects(gameState, opt.e, lastDiff);
+      gameState.history.push({ id: ev.id, chosenIndex: idx });
+      var parts = [];
+      Object.keys(opt.e).forEach(function (k) {
+        if (k in ATTRS) parts.push(ATTRS[k].name + (opt.e[k] >= 0 ? "+" : "") + opt.e[k]);
+      });
+      addLog("事件·" + ev.title + "：选「" + opt.t + "」" + (parts.length ? "　" + parts.join("，") : ""));
+      $("event-mask").style.display = "none";
+      renderAll();
+      autosave();
+      if (checkEnding()) return;
+      // 连锁事件（最多两层）
+      if (!endingActive && eventChainDepth < 2) {
+        var again = eligibleEvents();
+        if (again.length) {
+          eventChainDepth += 1;
+          showEventModal(again[Math.floor(Math.random() * again.length)]);
+        } else {
+          // 无更多事件且横屏，隐藏右栏占位提示
+        }
+      }
+    });
+    box.appendChild(b);
+  });
+  $("event-mask").style.display = "flex";
+}
+
+/* 结局 */
+function checkEnding() {
+  for (var i = 0; i < ENDINGS.length; i++) {
+    var e = ENDINGS[i];
+    try {
+      if (e.c(gameState)) {
+        endingActive = true;
+        $("end-title").textContent = "—— 结局：" + e.title + " ——";
+        $("end-desc").textContent = e.desc;
+        $("event-mask").style.display = "none";
+        $("end-mask").style.display = "flex";
+        clearSave(); // 结局后清除存档，避免读档回到已结束局面
+        renderAll();
+        return true;
+      }
+    } catch (err) {}
+  }
+  return false;
+}
+
+function closeAllModals() {
+  var evm = $("event-mask"); if (evm) evm.style.display = "none";
+  var endm = $("end-mask"); if (endm) endm.style.display = "none";
+}
+
+function autosave() { if (gameState) saveGame(gameState); }
+
+/* =====================================================================
+ * 初始化
+ * ===================================================================== */
+function init() {
+  setupTouch();
+
+  // 顶部"存档·首页"按钮
+  $("btn-save-home").addEventListener("click", function () {
+    if (gameState && !endingActive) saveGame(gameState);
+    // 返回首页：显示竖屏提示层（游戏退出）
+    closeAllModals();
+    $("game").style.display = "none";
+    $("orientation-layer").style.display = "flex";
+    $("orientation-text").textContent = "已存档并退出 · 请将手机横向放置继续";
+    gameState = null;
+  });
+
+  // 结局弹窗按钮
+  $("end-restart").addEventListener("click", function () {
+    $("end-mask").style.display = "none";
+    newGame();
+  });
+  $("end-home").addEventListener("click", function () {
+    $("end-mask").style.display = "none";
+    $("game").style.display = "none";
+    $("orientation-layer").style.display = "flex";
+    $("orientation-text").textContent = "请将手机横向放置游玩";
+    gameState = null;
+  });
+
+  // 方向检测：加载时 + 旋转/缩放时
+  window.addEventListener("resize", updateOrientation);
+  window.addEventListener("orientationchange", function () { setTimeout(updateOrientation, 100); });
+  updateOrientation();
+
+  // 竖屏提示层点击：若已有存档且处于横屏由用户横屏进入；这里点击提示层在竖屏时无操作
+  // （横屏时提示层隐藏，无需处理）
+}
+
+window.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
