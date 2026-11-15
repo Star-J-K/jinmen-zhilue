@@ -291,8 +291,8 @@ button, .attr-cell { -webkit-touch-callout: none; }
   color: #f0e6c8; padding: 14px 16px;
 }
 #action-result-screen .ar-scene {
-  flex: 0 0 42%;
-  min-height: 120px;
+  flex: 0 0 34%;
+  min-height: 100px;
   border-radius: 12px;
   border: 3px double #e8c97a;
   box-shadow: 0 6px 20px rgba(0,0,0,.5);
@@ -312,11 +312,11 @@ button, .attr-cell { -webkit-touch-callout: none; }
 /* 聊天框 */
 #action-result-screen .ar-chat {
   flex: 1 1 auto;
-  margin-top: 12px;
+  margin-top: 10px;
   background: rgba(0,0,0,.30);
   border: 1px solid #b89b68;
   border-radius: 12px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 0;
@@ -325,7 +325,7 @@ button, .attr-cell { -webkit-touch-callout: none; }
   touch-action: pan-y;
 }
 #action-result-screen .ar-line {
-  margin: 8px 0;
+  margin: 6px 0;
   display: flex; align-items: center;
   opacity: 0;
   animation: arIn .4s ease forwards;
@@ -333,9 +333,9 @@ button, .attr-cell { -webkit-touch-callout: none; }
 @keyframes arIn { to { opacity: 1; } }
 #action-result-screen .ar-line .bubble {
   max-width: 90%;
-  padding: 8px 14px;
-  border-radius: 14px;
-  font-size: 15px; line-height: 1.5;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 14px; line-height: 1.4;
   background: linear-gradient(180deg, #3a3122 0%, #2a2318 100%);
   border: 1px solid #b89b68;
   color: #f0e6c8;
@@ -348,8 +348,8 @@ button, .attr-cell { -webkit-touch-callout: none; }
 /* 继续按钮 */
 #action-result-screen .ar-next {
   flex: 0 0 auto;
-  margin-top: 12px; min-height: 50px;
-  font-family: inherit; font-size: 17px; letter-spacing: 4px;
+  margin-top: 10px; min-height: 44px;
+  font-family: inherit; font-size: 16px; letter-spacing: 4px;
   background: #e8c97a; color: #4d130c;
   border: 1px solid #b98a2e; border-radius: 10px; cursor: pointer;
 }
@@ -361,36 +361,66 @@ button, .attr-cell { -webkit-touch-callout: none; }
  *  - 竖屏：将游戏界面旋转 90° 横铺，用户竖持手机也能看到横向三栏，
  *          无需手动旋转手机、无提示、无引导页，扫码即玩。
  * ===================================================================== */
+/* =====================================================================
+ * 响应式适配
+ *  - 横屏（landscape）：游戏三栏并排，正常显示
+ *  - 竖屏（portrait）：隐藏游戏主体，显示「请横持手机」提示层，
+ *    避免旋转导致文字侧躺 / 半屏黑屏。横持手机后立即进入横屏游戏。
+ * ===================================================================== */
+/* 横持提示层（默认隐藏，竖屏时显示） */
+#rotate-hint {
+  display: none;
+  position: fixed; inset: 0; z-index: 200;
+  flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+  background: linear-gradient(rgba(30,15,5,.55), rgba(20,10,4,.7)),
+              url("images/cover.webp") center center / cover no-repeat;
+  color: #f7e6b8;
+  padding: 24px;
+}
+#rotate-hint .phone-icon {
+  width: 64px; height: 96px; margin: 0 auto 22px;
+  border: 3px solid #e8c97a; border-radius: 10px;
+  position: relative;
+  animation: rotateHint 1.6s ease-in-out infinite;
+}
+#rotate-hint .phone-icon::after {
+  content: ""; position: absolute; left: 50%; bottom: -14px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #e8c97a; transform: translateX(-50%);
+}
+@keyframes rotateHint {
+  0%, 20% { transform: rotate(0deg); }
+  60%, 100% { transform: rotate(90deg); }
+}
+#rotate-hint h2 {
+  margin: 0 0 10px; font-size: 26px; letter-spacing: 6px;
+  text-shadow: 0 2px 6px rgba(0,0,0,.6);
+}
+#rotate-hint p {
+  margin: 0; font-size: 15px; letter-spacing: 2px; color: #e8c97a;
+}
+
 @media (orientation: portrait) {
-  #game {
-    width: 100vh;
-    height: 100vw;
-    transform: rotate(90deg);
-    transform-origin: center center;
-    position: fixed;
-    top: 50%; left: 50%;
-    margin-left: -50vh;
-    margin-top: -50vw;
+  /* 竖屏：隐藏游戏与全屏层，显示横持提示 */
+  #game, #event-screen, #action-result-screen, #end-mask {
+    display: none !important;
   }
-  /* 统一横屏：起始页、全屏事件页、行动结果页、结局弹窗
-   * 同样旋转 90° 横铺，与游戏主体保持一致的横向体验。
-   * 关键：这些层横屏下用了 inset:0（含 right/bottom:0），
-   * 竖屏必须显式清除 right/bottom，否则与 top/left:50% 冲突导致半屏错位。 */
-  #start-screen,
-  #event-screen, #action-result-screen, #end-mask {
-    width: 100vh; height: 100vw;
-    transform: rotate(90deg);
-    transform-origin: center center;
-    position: fixed;
-    top: 50%; left: 50%;
-    right: auto; bottom: auto;
-    margin-left: -50vh;
-    margin-top: -50vw;
+  #rotate-hint {
+    display: flex;
   }
+  /* 起始页保持竖屏正常显示（居中封面，无需旋转） */
 }
 </style>
 </head>
 <body>
+
+<!-- ======================= 竖屏横持提示层 ======================= -->
+<div id="rotate-hint">
+  <div class="phone-icon"></div>
+  <h2>请 横 持 手 机</h2>
+  <p>横屏体验 · 旋转手机进入游戏</p>
+</div>
 
 <!-- ======================= 起始页（封面） ======================= -->
 <div id="start-screen">
