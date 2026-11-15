@@ -149,25 +149,22 @@ button, .attr-cell { -webkit-touch-callout: none; }
 #col-mid { overflow-y: auto; }
 .act-btn {
   display: block; width: 100%;
-  min-height: 74px;
-  margin: 7px 0; padding: 8px 12px;
+  min-height: 58px;
+  margin: 7px 0; padding: 9px 12px;
   font-family: inherit; font-size: 14px;
   text-align: left;
-  /* 衙门插画做按钮底图，叠加深色渐变保证文字可读 */
-  background: linear-gradient(rgba(30,20,8,.62), rgba(30,20,8,.62)),
-              var(--ya-img, none) center center / cover no-repeat;
-  background-color: #4a3b1d;
-  color: #f7e6b8;
+  /* 纯古风文字按钮：宣纸渐变底 + 朱砂描边，不再用衙门底图 */
+  background: linear-gradient(180deg, #fdf9ec 0%, #f0e4c8 100%);
+  color: #4a3b1d;
   border: 1px solid #b89b68; border-radius: 8px;
   cursor: pointer;
   transition: background .15s, transform .1s;
-  box-shadow: 0 1px 4px rgba(30,20,8,.4);
-  text-shadow: 0 1px 3px rgba(0,0,0,.7);
+  box-shadow: 0 1px 4px rgba(30,20,8,.25);
 }
-.act-btn .lab { font-weight: bold; font-size: 16px; letter-spacing: 2px; }
-.act-btn .sub { display: block; font-size: 11px; color: #e8d5a8; margin-top: 2px; text-shadow: 0 1px 2px rgba(0,0,0,.7); }
+.act-btn .lab { font-weight: bold; font-size: 16px; letter-spacing: 2px; color: #5a3a12; }
+.act-btn .sub { display: block; font-size: 11px; color: #8a7a55; margin-top: 2px; }
 .act-btn:active { background: #8a2a1e; color: #f7e6b8; transform: translateY(1px); }
-.act-btn:active .sub { color: #f0d898; }
+.act-btn:active .lab, .act-btn:active .sub { color: #f7e6b8; }
 .act-btn:disabled { opacity: .5; cursor: not-allowed; }
 .act-btn:disabled:active { transform: none; }
 #ap-note { font-size: 12px; color: #8a7a55; margin-top: 8px; }
@@ -224,28 +221,28 @@ button, .attr-cell { -webkit-touch-callout: none; }
   position: fixed; inset: 0; z-index: 120;
   display: none; flex-direction: column;
   background: radial-gradient(circle at 50% 30%, #2a2418 0%, #17130b 100%);
-  color: #f0e6c8; padding: 18px 20px;
+  color: #f0e6c8; padding: 14px 16px;
   overflow-y: auto;
 }
 #event-screen .ev-head {
-  text-align: center; margin-bottom: 12px;
+  text-align: center; margin-bottom: 10px;
 }
 #event-screen .ev-head .tag {
   display: inline-block; font-size: 12px; letter-spacing: 3px;
   color: #e8c97a; border: 1px solid #e8c97a; padding: 2px 12px; border-radius: 4px;
 }
 #event-screen .ev-head h3 {
-  margin: 8px 0 2px; font-size: 24px; letter-spacing: 4px; color: #f7e6b8;
+  margin: 6px 0 2px; font-size: 22px; letter-spacing: 4px; color: #f7e6b8;
   text-shadow: 0 2px 6px rgba(0,0,0,.6);
 }
 /* 场景图：事件插画铺满，叠加深色渐变 + 底部标题 */
 #event-scene {
   flex: 0 0 auto;
-  min-height: 200px;
-  height: 34vh;
+  min-height: 180px;
+  height: 30vh;
   border-radius: 12px;
   border: 3px double #e8c97a;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   box-shadow: 0 6px 20px rgba(0,0,0,.5);
   position: relative; overflow: hidden;
   /* 事件插画做背景 */
@@ -265,14 +262,14 @@ button, .attr-cell { -webkit-touch-callout: none; }
   text-shadow: 0 2px 6px rgba(0,0,0,.8);
 }
 #event-screen .ev-desc {
-  font-size: 15px; line-height: 1.7; color: #f0e6c8;
-  background: rgba(0,0,0,.28); border-radius: 10px; padding: 12px 14px;
-  margin-bottom: 14px;
+  font-size: 14px; line-height: 1.7; color: #f0e6c8;
+  background: rgba(0,0,0,.28); border-radius: 10px; padding: 10px 12px;
+  margin-bottom: 12px;
 }
 #event-screen .ev-opts { flex: 0 0 auto; }
 #event-screen .opt {
-  display: block; width: 100%; min-height: 54px;
-  margin: 9px 0; padding: 10px 14px;
+  display: block; width: 100%; min-height: 52px;
+  margin: 8px 0; padding: 10px 14px;
   font-family: inherit; font-size: 15px; text-align: left;
   background: linear-gradient(180deg, #3a3122 0%, #2a2318 100%);
   color: #f7e6b8;
@@ -281,6 +278,78 @@ button, .attr-cell { -webkit-touch-callout: none; }
 }
 #event-screen .opt:active { background: #8a2a1e; }
 #event-screen .opt .fx { display: block; font-size: 12px; color: #c8b47a; margin-top: 3px; }
+
+/* =====================================================================
+ * 行动结果页：点击衙门行动后弹出的全屏页
+ *  - 上半部：对应衙门插画
+ *  - 下半部：聊天框（气泡），逐行显示「哪个属性 +几 / -几」
+ * ===================================================================== */
+#action-result-screen {
+  position: fixed; inset: 0; z-index: 121;
+  display: none; flex-direction: column;
+  background: radial-gradient(circle at 50% 30%, #2a2418 0%, #17130b 100%);
+  color: #f0e6c8; padding: 14px 16px;
+}
+#action-result-screen .ar-scene {
+  flex: 0 0 auto;
+  height: 44vh; min-height: 200px;
+  border-radius: 12px;
+  border: 3px double #e8c97a;
+  box-shadow: 0 6px 20px rgba(0,0,0,.5);
+  position: relative; overflow: hidden;
+  background: var(--ar-img, none) center center / cover no-repeat, #2a2418;
+}
+#action-result-screen .ar-scene::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,.15) 0%, rgba(0,0,0,0) 45%, rgba(0,0,0,.6) 100%);
+  pointer-events: none;
+}
+#action-result-screen .ar-scene .ar-title {
+  position: absolute; left: 0; right: 0; bottom: 14px; z-index: 2;
+  text-align: center; font-size: 22px; letter-spacing: 6px; color: #f7e6b8;
+  text-shadow: 0 2px 8px rgba(0,0,0,.85);
+}
+/* 聊天框 */
+#action-result-screen .ar-chat {
+  flex: 1 1 auto;
+  margin-top: 12px;
+  background: rgba(0,0,0,.30);
+  border: 1px solid #b89b68;
+  border-radius: 12px;
+  padding: 12px 14px;
+  overflow-y: auto;
+  min-height: 0;
+}
+#action-result-screen .ar-line {
+  margin: 8px 0;
+  display: flex; align-items: center;
+  opacity: 0;
+  animation: arIn .4s ease forwards;
+}
+@keyframes arIn { to { opacity: 1; } }
+#action-result-screen .ar-line .bubble {
+  max-width: 90%;
+  padding: 8px 14px;
+  border-radius: 14px;
+  font-size: 15px; line-height: 1.5;
+  background: linear-gradient(180deg, #3a3122 0%, #2a2318 100%);
+  border: 1px solid #b89b68;
+  color: #f0e6c8;
+}
+#action-result-screen .ar-line .bubble .b-name {
+  font-weight: bold; color: #e8c97a; margin-right: 6px; letter-spacing: 1px;
+}
+#action-result-screen .ar-line .bubble .b-up { color: #6ee7a0; font-weight: bold; }
+#action-result-screen .ar-line .bubble .b-down { color: #f87171; font-weight: bold; }
+/* 继续按钮 */
+#action-result-screen .ar-next {
+  flex: 0 0 auto;
+  margin-top: 12px; min-height: 50px;
+  font-family: inherit; font-size: 17px; letter-spacing: 4px;
+  background: #e8c97a; color: #4d130c;
+  border: 1px solid #b98a2e; border-radius: 10px; cursor: pointer;
+}
+#action-result-screen .ar-next:active { background: #f0d898; transform: translateY(1px); }
 
 /* =====================================================================
  * 响应式适配：任何方向都呈现"横屏三栏"游戏画面
@@ -299,15 +368,13 @@ button, .attr-cell { -webkit-touch-callout: none; }
     margin-left: -50vh;
     margin-top: -50vw;
   }
-  /* 全屏事件页、结局弹窗同样横铺，保持视觉一致 */
-  #event-screen, #end-mask {
-    width: 100vh; height: 100vw;
-    transform: rotate(90deg);
-    transform-origin: center center;
-    position: fixed;
-    top: 50%; left: 50%;
-    margin-left: -50vh;
-    margin-top: -50vw;
+  /* 全屏事件页 / 行动结果页 / 结局弹窗：不旋转，直接铺满竖屏视口，
+   * 避免 rotate 上下文中 position/margin 错位导致的「半屏黑屏」问题。 */
+  #event-screen, #action-result-screen, #end-mask {
+    width: 100vw; height: 100vh;
+    top: 0; left: 0; right: 0; bottom: 0;
+    transform: none;
+    margin: 0;
   }
   #start-screen { transform: none; }
 }
@@ -375,6 +442,15 @@ button, .attr-cell { -webkit-touch-callout: none; }
   </div>
   <p class="ev-desc" id="event-desc"></p>
   <div class="ev-opts" id="event-options"></div>
+</div>
+
+<!-- ======================= 行动结果全屏页（插画 + 聊天框） ======================= -->
+<div id="action-result-screen">
+  <div class="ar-scene" id="ar-scene">
+    <span class="ar-title" id="ar-title"></span>
+  </div>
+  <div class="ar-chat" id="ar-chat"></div>
+  <button class="ar-next" id="ar-next">继 续</button>
 </div>
 
 <!-- ======================= 事件弹窗（浮层，右对齐，保留兼容） ======================= -->
@@ -453,7 +529,77 @@ var SOUND = {
   event: function () { this.tone("sine", 220, 0.20, 0.22); this.tone("sine", 330, 0.18, 0.15); },          // 事件弹出
   ending: function () { this.tone("sine", 196, 0.5, 0.25); this.tone("sine", 294, 0.6, 0.2); },            // 结局钟鸣
   good: function () { this.tone("triangle", 523, 0.10, 0.14); this.tone("triangle", 784, 0.12, 0.10); },   // 增益
-  bad: function () { this.tone("sawtooth", 180, 0.16, 0.12); }                                             // 减益
+  bad: function () { this.tone("sawtooth", 180, 0.16, 0.12); },                                             // 减益
+
+  /* ---------- 合成拟声音效（各衙门 / 事件场景） ---------- */
+  noiseBurst: function (dur, gain, freq) {
+    if (!this.enabled) return;
+    this.ensure(); if (!this.ctx) return;
+    var t = this.ctx.currentTime;
+    var size = Math.max(1, Math.floor(this.ctx.sampleRate * dur));
+    var buf = this.ctx.createBuffer(1, size, this.ctx.sampleRate);
+    var data = buf.getChannelData(0);
+    for (var i = 0; i < size; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / size);
+    var src = this.ctx.createBufferSource(); src.buffer = buf;
+    var f = this.ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = freq || 1000; f.Q.value = 0.8;
+    var g = this.ctx.createGain(); g.gain.value = gain || 0.25;
+    src.connect(f); f.connect(g); g.connect(this.ctx.destination);
+    src.start(t);
+  },
+  /* 惊堂木「啪」 */
+  gavel: function () {
+    this.noiseBurst(0.08, 0.5, 1400);
+    this.tone("square", 140, 0.06, 0.25);
+  },
+  /* 铜锣 */
+  gong: function () {
+    this.tone("sine", 180, 0.7, 0.28);
+    this.tone("sine", 360, 0.5, 0.12);
+    this.noiseBurst(0.12, 0.2, 900);
+  },
+  /* 算盘 / 竹简拨珠 */
+  abacus: function () {
+    for (var i = 0; i < 5; i++) {
+      this.tone("triangle", 1200 + i * 180, 0.04, 0.10);
+    }
+  },
+  /* 堂鼓 */
+  drum: function () {
+    this.tone("sine", 90, 0.16, 0.32);
+    this.tone("sine", 75, 0.20, 0.28);
+  },
+  /* 钟声（放粮 / 赈济） */
+  bell: function () {
+    this.tone("sine", 520, 0.6, 0.20);
+    this.tone("sine", 780, 0.5, 0.10);
+  },
+  /* 机杼 / 机器隆隆 */
+  machine: function () {
+    for (var i = 0; i < 6; i++) {
+      this.tone("square", 200 + i * 30, 0.05, 0.06);
+    }
+    this.noiseBurst(0.3, 0.15, 300);
+  },
+  /* 更鼓（夜 / 休整） */
+  night: function () {
+    this.tone("sine", 140, 0.3, 0.22);
+    this.tone("sine", 140, 0.3, 0.20);
+  },
+
+  /* ---------- 台词语音（浏览器本地 TTS） ---------- */
+  speak: function (text) {
+    if (!this.enabled || !text) return;
+    try {
+      if (!("speechSynthesis" in window)) return;
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = "zh-CN";
+      u.rate = 0.95;
+      u.pitch = 0.9;
+      u.volume = 1;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
+  }
 };
 
 var SAVE_KEY = "jinmen_save_v1";
@@ -511,30 +657,31 @@ var ATTRS = {
 var MONTHS = ["正月","二月","三月","四月","五月","六月","七月","八月","九月","十月","十一月","十二月"];
 var YEARS  = ["光绪二十二年","光绪二十三年","光绪二十四年","光绪二十五年","光绪二十六年"];
 
-/* 行动：8 项，均消耗 1 行动点 */
+/* 行动：8 项，均消耗 1 行动点。
+ * line：点击后朗读的台词语音；ya：对应衙门插画编号（ya1~ya8）；cue：合成音效类型 */
 var ACTIONS = [
-  { id: "shengtang", label: "升堂理事", ap: 1,
+  { id: "shengtang", label: "升堂理事", ap: 1, ya: 1, line: "升~堂~！", cue: "gavel",
     sub: "库银-30 · 治安+2 · 民望+1",
     effect: { zhian: 2, minwang: 1, kuyin: -30 } },
-  { id: "xuncha", label: "巡查河堤", ap: 1,
+  { id: "xuncha", label: "巡查河堤", ap: 1, ya: 2, line: "走，随本官巡堤去！", cue: "gong",
     sub: "库银-80 · 河防+4",
     effect: { hefang: 4, kuyin: -80 } },
-  { id: "yanshang", label: "召见盐商商会", ap: 1,
+  { id: "yanshang", label: "召见盐商商会", ap: 1, ya: 3, line: "传盐商进见。", cue: "abacus",
     sub: "库银+150 · 清廉-2",
     effect: { kuyin: 150, qinglian: -2 } },
-  { id: "kaohe", label: "考核官吏", ap: 1,
+  { id: "kaohe", label: "考核官吏", ap: 1, ya: 4, line: "尔等近来可曾勤勉？", cue: "drum",
     sub: "库银-20 · 清廉+3",
     effect: { qinglian: 3, kuyin: -20 } },
-  { id: "kaicang", label: "开仓赈济", ap: 1,
+  { id: "kaicang", label: "开仓赈济", ap: 1, ya: 5, line: "开~仓~放粮！", cue: "bell",
     sub: "仓粮-150 · 民望+4 · 治安+2",
     effect: { cangliang: -150, minwang: 4, zhian: 2 } },
-  { id: "yangwu", label: "兴办洋务", ap: 1,
+  { id: "yangwu", label: "兴办洋务", ap: 1, ya: 6, line: "机器隆隆，兴我洋务！", cue: "machine",
     sub: "库银-200 · 洋务+3",
     effect: { kuyin: -200, yangwu: 3 } },
-  { id: "bukuai", label: "招募捕快", ap: 1,
+  { id: "bukuai", label: "招募捕快", ap: 1, ya: 7, line: "广招捕快，保境安民！", cue: "gong",
     sub: "库银-100 · 治安+4",
     effect: { kuyin: -100, zhian: 4 } },
-  { id: "xiuzheng", label: "休整整月", ap: 1,
+  { id: "xiuzheng", label: "休整整月", ap: 1, ya: 8, line: "", cue: "night",
     sub: "无数值变化，推进月份",
     effect: {} }
 ];
@@ -712,6 +859,30 @@ var EVENT_THEMES = {
   TJ020: { zi:"善", sub:"善堂争赈", c1:"#3a5a4a", c2:"#16281f" }    // 民生
 };
 
+/* 事件台词语音：关键事件弹出一句喊话/禀报（浏览器 TTS 朗读） */
+var EVENT_LINES = {
+  TJ001: "道台大人，海河涨水了！",
+  TJ002: "漕船堵在三岔口，走不动啦！",
+  TJ003: "盐商求见，愿捐银求引。",
+  TJ004: "码头打起来了，快派差役！",
+  TJ005: "租界修路，越了界了！",
+  TJ006: "机器局锅炉炸了，伤了人！",
+  TJ007: "庙会闹时疫，药铺没药了！",
+  TJ008: "北仓来了好多流民。",
+  TJ009: "书吏虚报药价，账目对不上。",
+  TJ010: "乡绅愿捐修减水坝。",
+  TJ011: "海河结冰，渡船停航了。",
+  TJ012: "漕仓的粮食发霉了。",
+  TJ013: "盐坨起火了，快来救火！",
+  TJ014: "洋船撞沉了民船！",
+  TJ015: "机器局要招学徒了。",
+  TJ016: "电杆要立到妈祖庙前了！",
+  TJ017: "修河的民夫都跑了。",
+  TJ018: "胥吏包庇赌局，收黑钱。",
+  TJ019: "军饷呢！营里的兵勇闹起来了！",
+  TJ020: "善堂争着承办赈务，互揭账目。"
+};
+
 /* 依据选项效果判断音效：只看"成效类"属性净变化（民望/治安/河防/洋务/租界/清廉），
  * 库银/仓粮的增减属资源投入，不影响音效倾向。净正→good，净负→bad，持平→action */
 function optionSound(effect) {
@@ -847,8 +1018,6 @@ function renderActions() {
     var b = document.createElement("button");
     b.className = "act-btn";
     b.disabled = gameState.ap < a.ap || endingActive;
-    // 绑定衙门按钮底图（ya1~ya8），按行动顺序对应
-    b.style.setProperty("--ya-img", 'url("images/ya' + (idx + 1) + '.webp")');
     b.innerHTML = '<span class="lab">' + a.label + '</span><span class="sub">' + a.sub + '</span>';
     b.addEventListener("click", function () { doAction(a.id); });
     box.appendChild(b);
@@ -915,7 +1084,7 @@ function resumeGame() {
   }
 }
 
-/* 执行行动 */
+/* 执行行动：点击后先弹全屏结果页（插画 + 聊天框），确认后再推进回合 */
 function doAction(actionId) {
   if (endingActive || !gameState) return;
   var a = ACTION_BY_ID[actionId];
@@ -934,15 +1103,81 @@ function doAction(actionId) {
   });
   var msg = "【" + a.label + "】" + (parts.length ? "　" + parts.join("，") : "");
   addLog(msg);
-  SOUND.action(); // 行动音效
-
-  // 行动后判定结局
-  if (checkEnding()) { renderAll(); return; }
-
   renderAll();
   autosave();
 
-  if (gameState.ap <= 0) { endRound(); }
+  // 弹出全屏行动结果页
+  showActionResult(a);
+}
+
+/* 行动结果全屏页：上部衙门插画，下部聊天框逐行显示增减 */
+function showActionResult(a) {
+  var screen = $("action-result-screen");
+  // 插画 + 标题
+  $("ar-title").textContent = a.label;
+  $("ar-scene").style.setProperty("--ar-img", 'url("images/ya' + a.ya + '.webp")');
+
+  // 聊天框：逐行气泡，显示「属性 +N / -N」
+  var chat = $("ar-chat");
+  chat.innerHTML = "";
+  var keys = Object.keys(a.effect);
+  var lines = [];
+
+  // 先来一句官差禀报的引导气泡
+  var head = document.createElement("div");
+  head.className = "ar-line";
+  head.innerHTML = '<span class="bubble"><span class="b-name">禀道台：</span>' + actionResultLead(a) + '</span>';
+  chat.appendChild(head);
+
+  // 逐条属性变化气泡
+  keys.forEach(function (k) {
+    var v = a.effect[k];
+    if (!(k in ATTRS) || v === 0) return;
+    var line = document.createElement("div");
+    line.className = "ar-line";
+    var cls = v > 0 ? "b-up" : "b-down";
+    var sign = v > 0 ? "+" : "";
+    line.innerHTML = '<span class="bubble"><span class="b-name">' + ATTRS[k].name + '：</span><span class="' + cls + '">' + sign + v + '</span></span>';
+    chat.appendChild(line);
+  });
+
+  // 无变化的行动（如休整）显示一句说明
+  if (keys.length === 0 || keys.every(function (k) { return a.effect[k] === 0; })) {
+    var nl = document.createElement("div");
+    nl.className = "ar-line";
+    nl.innerHTML = '<span class="bubble"><span class="b-name">禀道台：</span>本月暂无政事，姑且休整。</span>';
+    chat.appendChild(nl);
+  }
+
+  // 台词 + 音效（先合成音效，再 TTS 朗读台词）
+  if (SOUND[a.cue]) SOUND[a.cue]();
+  else SOUND.action();
+  // TTS 需在用户手势上下文内触发（iOS Safari 限制），避免长延迟
+  if (a.line) SOUND.speak(a.line);
+
+  screen.style.display = "flex";
+
+  // 「继续」：关闭结果页，判定结局 / 推进回合
+  $("ar-next").onclick = function () {
+    screen.style.display = "none";
+    if (checkEnding()) return;
+    if (gameState.ap <= 0) { endRound(); }
+  };
+}
+
+/* 各行动的引导旁白（聊天框首句） */
+function actionResultLead(a) {
+  var map = {
+    shengtang: "升堂理事，各房呈上案牍。",
+    xuncha: "河堤工段，民夫待命。",
+    yanshang: "盐商商会诸绅已至堂前。",
+    kaohe: "考功司呈上各官政绩册。",
+    kaicang: "北仓已备齐赈粮。",
+    yangwu: "机器局总办候令兴工。",
+    bukuai: "巡捕营呈报，需增补捕快。",
+    xiuzheng: "本月安顿，无大事相扰。"
+  };
+  return map[a.id] || "禀报道台，此事已办妥。";
 }
 
 /* 回合推进 */
@@ -1030,6 +1265,9 @@ function showEventModal(ev) {
   });
 
   SOUND.event(); // 事件弹出音效
+  // 事件台词语音（关键事件配一句喊话，如「军饷呢」）
+  var evLine = EVENT_LINES[ev.id];
+  if (evLine) SOUND.speak(evLine);
   $("event-screen").style.display = "flex";
 }
 
@@ -1057,6 +1295,7 @@ function checkEnding() {
 
 function closeAllModals() {
   var evs = $("event-screen"); if (evs) evs.style.display = "none";
+  var ars = $("action-result-screen"); if (ars) ars.style.display = "none";
   var evm = $("event-mask"); if (evm) evm.style.display = "none";
   var endm = $("end-mask"); if (endm) endm.style.display = "none";
 }
