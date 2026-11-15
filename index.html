@@ -238,8 +238,8 @@ button, .attr-cell { -webkit-touch-callout: none; }
 /* 场景图：事件插画铺满，叠加深色渐变 + 底部标题 */
 #event-scene {
   flex: 0 0 auto;
-  min-height: 180px;
-  height: 30vh;
+  min-height: 120px;
+  height: 30%;
   border-radius: 12px;
   border: 3px double #e8c97a;
   margin-bottom: 12px;
@@ -291,8 +291,8 @@ button, .attr-cell { -webkit-touch-callout: none; }
   color: #f0e6c8; padding: 14px 16px;
 }
 #action-result-screen .ar-scene {
-  flex: 0 0 auto;
-  height: 44vh; min-height: 200px;
+  flex: 0 0 42%;
+  min-height: 120px;
   border-radius: 12px;
   border: 3px double #e8c97a;
   box-shadow: 0 6px 20px rgba(0,0,0,.5);
@@ -318,7 +318,11 @@ button, .attr-cell { -webkit-touch-callout: none; }
   border-radius: 12px;
   padding: 12px 14px;
   overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 #action-result-screen .ar-line {
   margin: 8px 0;
@@ -368,15 +372,21 @@ button, .attr-cell { -webkit-touch-callout: none; }
     margin-left: -50vh;
     margin-top: -50vw;
   }
-  /* 全屏事件页 / 行动结果页 / 结局弹窗：不旋转，直接铺满竖屏视口，
-   * 避免 rotate 上下文中 position/margin 错位导致的「半屏黑屏」问题。 */
+  /* 统一横屏：起始页、全屏事件页、行动结果页、结局弹窗
+   * 同样旋转 90° 横铺，与游戏主体保持一致的横向体验。
+   * 关键：这些层横屏下用了 inset:0（含 right/bottom:0），
+   * 竖屏必须显式清除 right/bottom，否则与 top/left:50% 冲突导致半屏错位。 */
+  #start-screen,
   #event-screen, #action-result-screen, #end-mask {
-    width: 100vw; height: 100vh;
-    top: 0; left: 0; right: 0; bottom: 0;
-    transform: none;
-    margin: 0;
+    width: 100vh; height: 100vw;
+    transform: rotate(90deg);
+    transform-origin: center center;
+    position: fixed;
+    top: 50%; left: 50%;
+    right: auto; bottom: auto;
+    margin-left: -50vh;
+    margin-top: -50vw;
   }
-  #start-screen { transform: none; }
 }
 </style>
 </head>
@@ -591,12 +601,21 @@ var SOUND = {
     if (!this.enabled || !text) return;
     try {
       if (!("speechSynthesis" in window)) return;
+      // 预载中文语音（部分浏览器首次需 getVoices 触发异步加载）
+      var voices = window.speechSynthesis.getVoices();
       var u = new SpeechSynthesisUtterance(text);
       u.lang = "zh-CN";
       u.rate = 0.95;
       u.pitch = 0.9;
       u.volume = 1;
-      window.speechSynthesis.cancel();
+      // 优先挑选中文音色
+      for (var i = 0; i < voices.length; i++) {
+        if (/zh|cmn|chinese/i.test(voices[i].lang)) { u.voice = voices[i]; break; }
+      }
+      // 仅在确有正在播报时才 cancel，避免吞掉刚排队的语音
+      if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+        window.speechSynthesis.cancel();
+      }
       window.speechSynthesis.speak(u);
     } catch (e) {}
   }
@@ -1149,11 +1168,12 @@ function showActionResult(a) {
     chat.appendChild(nl);
   }
 
-  // 台词 + 音效（先合成音效，再 TTS 朗读台词）
-  if (SOUND[a.cue]) SOUND[a.cue]();
-  else SOUND.action();
-  // TTS 需在用户手势上下文内触发（iOS Safari 限制），避免长延迟
+  // 台词 + 音效：语音优先触发（在用户手势上下文内），音效稍后补上，避免抢占语音通道
   if (a.line) SOUND.speak(a.line);
+  setTimeout(function () {
+    if (SOUND[a.cue]) SOUND[a.cue]();
+    else SOUND.action();
+  }, 80);
 
   screen.style.display = "flex";
 
@@ -1264,10 +1284,10 @@ function showEventModal(ev) {
     box.appendChild(b);
   });
 
-  SOUND.event(); // 事件弹出音效
-  // 事件台词语音（关键事件配一句喊话，如「军饷呢」）
+  // 事件台词 + 音效：语音优先，音效稍后补上
   var evLine = EVENT_LINES[ev.id];
   if (evLine) SOUND.speak(evLine);
+  setTimeout(function () { SOUND.event(); }, 80);
   $("event-screen").style.display = "flex";
 }
 
