@@ -8,68 +8,119 @@
 <title>津门治略 · 天津道台沙盘</title>
 <style>
 /* =====================================================================
- * 基础：仿古简约风格，纯文字+色块，无图片/Canvas/动画，禁用滚动
+ * 基础：古风氛围 —— 宣纸底、宫墙红、墨色描边，纯 CSS 渐变色块
+ * 无图片/Canvas，禁用滚动
  * ===================================================================== */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body {
   margin: 0; padding: 0; height: 100%;
   font-family: "PingFang SC", "Microsoft YaHei", "SimSun", serif;
-  background: #efe7d3;
+  /* 宣纸质感：米黄到浅褐的径向渐变 */
+  background: radial-gradient(circle at 50% 20%, #f7efdb 0%, #efe3c6 55%, #e6d5ae 100%);
   color: #33291a;
   line-height: 1.5;
-  /* 禁止页面滚动与拉伸（防止 iOS 橡皮筋与误触滚动） */
   overflow: hidden;
   overscroll-behavior: none;
   touch-action: manipulation;
-  position: fixed;             /* 在移动端固定视口，禁止滚动 */
+  position: fixed;
   width: 100%;
 }
-/* 关闭双击/长按选择与点击高亮，防误触 */
 body { -webkit-user-select: none; user-select: none; }
 body.selectable, body.selectable * { -webkit-user-select: text; user-select: text; }
 button, .attr-cell { -webkit-touch-callout: none; }
 
 /* =====================================================================
- * 主游戏容器：仅在横屏且已开局时显示
- * 使用固定全屏，Grid 三栏：左属性 | 中行动 | 右弹窗区
- * 靠 media query (orientation: landscape) + JS 双重保证
+ * 起始页（封面）：宫墙红 + 墨色大字标题 + 开始/继续按钮
+ * ===================================================================== */
+#start-screen {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+  /* 宫墙红渐变背景，模拟古风封面 */
+  background: radial-gradient(circle at 50% 30%, #a33a2b 0%, #7a2318 55%, #4d130c 100%);
+  padding: 30px;
+}
+#start-screen .frame {
+  width: 100%; max-width: 420px;
+  padding: 40px 28px;
+  border: 3px double #e8c97a;
+  border-radius: 14px;
+  background: rgba(0,0,0,.18);
+  box-shadow: 0 10px 40px rgba(0,0,0,.4);
+}
+#start-screen .sub { font-size: 13px; letter-spacing: 6px; color: #e8c97a; margin: 0 0 6px; }
+#start-screen h1 {
+  font-size: 52px; margin: 0 0 8px; color: #f7e6b8;
+  letter-spacing: 10px; font-weight: bold;
+  text-shadow: 0 2px 6px rgba(0,0,0,.5);
+}
+#start-screen .seal {
+  display: inline-block; margin: 8px 0 18px;
+  color: #e8c97a; font-size: 15px; letter-spacing: 3px;
+  border: 1px solid #e8c97a; padding: 3px 14px; border-radius: 4px;
+}
+#start-screen .btn {
+  display: block; width: 100%; max-width: 260px; margin: 12px auto;
+  min-height: 52px; padding: 10px 20px;
+  font-family: inherit; font-size: 18px; letter-spacing: 4px;
+  color: #4d130c; background: #e8c97a;
+  border: 1px solid #b98a2e; border-radius: 8px; cursor: pointer;
+  box-shadow: 0 3px 8px rgba(0,0,0,.35);
+}
+#start-screen .btn:active { background: #f0d898; transform: translateY(1px); }
+#start-screen .btn.ghost {
+  background: transparent; color: #f7e6b8; border: 1px solid #e8c97a;
+}
+#start-screen .hint { font-size: 12px; color: #d8c48a; margin-top: 14px; }
+
+/* =====================================================================
+ * 主游戏容器
  * ===================================================================== */
 #game {
   position: fixed; inset: 0; z-index: 1;
-  display: none;             /* 默认隐藏，开局后显示 */
+  display: none;
   grid-template-rows: auto 1fr;
   gap: 0;
 }
-/* 顶部标题条 */
+/* 顶部标题条：宫墙红 */
 #topbar {
   display: flex; align-items: center; justify-content: space-between;
   padding: 8px 16px; gap: 8px;
-  background: #4a3f2a; color: #f3ecd8;
+  background: linear-gradient(180deg, #8a2a1e 0%, #6f1f15 100%);
+  color: #f7e6b8;
   font-size: 14px; flex-wrap: wrap;
+  border-bottom: 2px solid #4d130c;
 }
-#topbar .t-title { font-size: 17px; font-weight: bold; letter-spacing: 2px; }
-#topbar .t-info { color: #d8cfae; }
-#topbar button { background: #5c4f33; color: #f3ecd8; border: 1px solid #7d6d48; }
+#topbar .t-title { font-size: 17px; font-weight: bold; letter-spacing: 4px; }
+#topbar .t-info { color: #e8c97a; }
+#topbar button {
+  background: #4d130c; color: #f7e6b8; border: 1px solid #e8c97a;
+  border-radius: 6px; min-height: 34px; font-family: inherit;
+}
 
 /* =====================================================================
- * 三栏主区：属性 | 行动 | 弹窗区
+ * 三栏主区：属性 | 行动 | 弹窗区（木质/宣纸栏框）
  * ===================================================================== */
 #main {
   display: grid;
-  grid-template-columns: 1.15fr 1fr 1fr;   /* 左略宽放属性 */
+  grid-template-columns: 1.15fr 1fr 1fr;
   gap: 10px;
   padding: 10px;
   min-height: 0;
 }
 .col {
-  background: #fbf7ea;
-  border: 1px solid #cfc2a1;
+  background: linear-gradient(180deg, #fbf6e8 0%, #f3ead2 100%);
+  border: 1px solid #b89b68;
   border-radius: 10px;
   padding: 12px;
   overflow: hidden;
   display: flex; flex-direction: column;
+  box-shadow: inset 0 0 0 1px #fdf9ee, 0 2px 6px rgba(90,70,40,.15);
 }
-.col h2 { font-size: 15px; margin: 0 0 10px; color: #6a5834; border-bottom: 2px solid #e0d4b2; padding-bottom: 6px; }
+.col h2 {
+  font-size: 15px; margin: 0 0 10px; color: #6a5834;
+  border-bottom: 2px solid #d4b877; padding-bottom: 6px; letter-spacing: 2px;
+}
 
 /* ---------- 左栏 · 属性 ---------- */
 #col-left { overflow-y: auto; }
@@ -97,18 +148,19 @@ button, .attr-cell { -webkit-touch-callout: none; }
   margin: 7px 0; padding: 6px 12px;
   font-family: inherit; font-size: 14px;
   text-align: left;
-  background: #fffdf5;
-  color: #33291a;
-  border: 1px solid #9a8a62; border-radius: 8px;
+  background: linear-gradient(180deg, #fdf9ec 0%, #f5ecd6 100%);
+  color: #4a3b1d;
+  border: 1px solid #b89b68; border-radius: 8px;
   cursor: pointer;
   transition: background .15s;
+  box-shadow: 0 1px 3px rgba(90,70,40,.18);
 }
 .act-btn .lab { font-weight: bold; font-size: 15px; }
 .act-btn .sub { display: block; font-size: 11px; color: #9a8a62; margin-top: 2px; }
-.act-btn:active { background: #3f6d3a; color: #fff; }   /* 触屏按下变色反馈 */
-.act-btn:active .sub { color: #e2efdc; }
+.act-btn:active { background: #8a2a1e; color: #f7e6b8; }   /* 按下变宫墙红 */
+.act-btn:active .sub { color: #e8c97a; }
 .act-btn:disabled { opacity: .45; cursor: not-allowed; }
-.act-btn:disabled:active { background: #fffdf5; color: #33291a; }
+.act-btn:disabled:active { background: linear-gradient(180deg, #fdf9ec 0%, #f5ecd6 100%); color: #4a3b1d; }
 #ap-note { font-size: 12px; color: #8a7a55; margin-top: 8px; }
 .log { font-size: 12px; color: #6a5834; border-top: 1px dashed #e5dabc; margin-top: 10px; padding-top: 6px; max-height: 130px; overflow-y: auto; }
 .log div { padding: 1px 0; }
@@ -129,33 +181,91 @@ button, .attr-cell { -webkit-touch-callout: none; }
 }
 .modal {
   width: 100%; max-width: 420px; max-height: 92%;
-  margin-left: auto;                 /* 右对齐，贴合"右栏弹窗"设计 */
-  background: #fbf7ea;
-  border: 2px solid #6a5834; border-radius: 12px;
+  margin-left: auto;
+  background: linear-gradient(180deg, #fbf6e8 0%, #f3ead2 100%);
+  border: 2px solid #8a2a1e; border-radius: 12px;
   padding: 16px 18px;
   overflow-y: auto;
-  box-shadow: 0 8px 30px rgba(0,0,0,.45);
+  box-shadow: 0 8px 30px rgba(0,0,0,.5);
 }
-.modal h3 { margin: 0 0 8px; font-size: 18px; color: #4a3b1d; }
+.modal h3 { margin: 0 0 8px; font-size: 18px; color: #8a2a1e; letter-spacing: 2px; border-bottom: 1px solid #d4b877; padding-bottom: 6px; }
 .modal .desc { font-size: 14px; color: #5a4a2c; margin: 0 0 12px; }
 .modal .opt {
   display: block; width: 100%; min-height: 46px;
   margin: 8px 0; padding: 8px 12px;
   font-family: inherit; font-size: 14px; text-align: left;
-  background: #fffdf5; color: #33291a;
-  border: 1px solid #9a8a62; border-radius: 8px; cursor: pointer;
+  background: linear-gradient(180deg, #fdf9ec 0%, #f5ecd6 100%);
+  color: #4a3b1d;
+  border: 1px solid #b89b68; border-radius: 8px; cursor: pointer;
   transition: background .15s;
 }
-.modal .opt:active { background: #3f6d3a; color: #fff; }
+.modal .opt:active { background: #8a2a1e; color: #f7e6b8; }
 .modal .opt .fx { display: block; font-size: 11px; color: #9a8a62; margin-top: 2px; }
 .modal .actions { margin-top: 12px; display: flex; gap: 10px; }
 
+/* 音效开关按钮（顶部条内，无音频时也可见） */
+#btn-sound {
+  min-width: 40px; font-family: inherit;
+}
+
 /* =====================================================================
- * 响应式适配：
- *  - 横屏：三栏并排（属性 | 行动 | 弹窗区）
- *  - 竖屏：改为纵向堆叠，允许上下滚动，游戏照常可玩
- * 竖屏时不再强制隐藏游戏，只由 JS 显示一条轻量提示条（可关闭）。
+ * 全屏事件页：事件触发时铺满全屏，含场景卡图区 + 描述 + 选项
  * ===================================================================== */
+#event-screen {
+  position: fixed; inset: 0; z-index: 120;
+  display: none; flex-direction: column;
+  background: radial-gradient(circle at 50% 30%, #2a2418 0%, #17130b 100%);
+  color: #f0e6c8; padding: 18px 20px;
+  overflow-y: auto;
+}
+#event-screen .ev-head {
+  text-align: center; margin-bottom: 12px;
+}
+#event-screen .ev-head .tag {
+  display: inline-block; font-size: 12px; letter-spacing: 3px;
+  color: #e8c97a; border: 1px solid #e8c97a; padding: 2px 12px; border-radius: 4px;
+}
+#event-screen .ev-head h3 {
+  margin: 8px 0 2px; font-size: 24px; letter-spacing: 4px; color: #f7e6b8;
+  text-shadow: 0 2px 6px rgba(0,0,0,.6);
+}
+/* 场景卡：主题字大号居中 + 副题 + 渐变底色 + 纹样边框 */
+#event-scene {
+  flex: 0 0 auto;
+  min-height: 170px;
+  border-radius: 12px;
+  border: 3px double #e8c97a;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  margin-bottom: 14px;
+  box-shadow: inset 0 0 40px rgba(0,0,0,.35), 0 6px 20px rgba(0,0,0,.5);
+  position: relative; overflow: hidden;
+}
+#event-scene .zi {
+  font-size: 88px; font-weight: bold; color: rgba(255,240,200,.92);
+  text-shadow: 0 4px 12px rgba(0,0,0,.5); line-height: 1;
+}
+#event-scene .sub {
+  font-size: 15px; letter-spacing: 4px; color: #e8c97a; margin-top: 6px;
+}
+#event-screen .ev-desc {
+  font-size: 15px; line-height: 1.7; color: #f0e6c8;
+  background: rgba(0,0,0,.28); border-radius: 10px; padding: 12px 14px;
+  margin-bottom: 14px;
+}
+#event-screen .ev-opts { flex: 0 0 auto; }
+#event-screen .opt {
+  display: block; width: 100%; min-height: 54px;
+  margin: 9px 0; padding: 10px 14px;
+  font-family: inherit; font-size: 15px; text-align: left;
+  background: linear-gradient(180deg, #3a3122 0%, #2a2318 100%);
+  color: #f7e6b8;
+  border: 1px solid #b89b68; border-radius: 10px; cursor: pointer;
+  transition: background .15s;
+}
+#event-screen .opt:active { background: #8a2a1e; }
+#event-screen .opt .fx { display: block; font-size: 12px; color: #c8b47a; margin-top: 3px; }
+
 /* =====================================================================
  * 响应式适配：任何方向都呈现"横屏三栏"游戏画面
  *  - 横屏：三栏并排（属性 | 行动 | 弹窗区），正常显示
@@ -164,25 +274,50 @@ button, .attr-cell { -webkit-touch-callout: none; }
  * ===================================================================== */
 @media (orientation: portrait) {
   #game {
-    width: 100vh;      /* 竖屏时以短边为"高"、长边为"宽" */
+    width: 100vh;
     height: 100vw;
     transform: rotate(90deg);
     transform-origin: center center;
     position: fixed;
     top: 50%; left: 50%;
-    margin-left: -50vh;  /* 旋转后居中校正 */
+    margin-left: -50vh;
     margin-top: -50vw;
   }
+  /* 全屏事件页、结局弹窗同样横铺，保持视觉一致 */
+  #event-screen, #end-mask {
+    width: 100vh; height: 100vw;
+    transform: rotate(90deg);
+    transform-origin: center center;
+    position: fixed;
+    top: 50%; left: 50%;
+    margin-left: -50vh;
+    margin-top: -50vw;
+  }
+  #start-screen { transform: none; }
 }
 </style>
 </head>
 <body>
 
-<!-- ======================= 游戏主界面（扫码即自动进入，无引导页无竖屏提示） ======================= -->
+<!-- ======================= 起始页（封面） ======================= -->
+<div id="start-screen">
+  <div class="frame">
+    <p class="sub">光 绪 二 十 二 年</p>
+    <h1>津门治略</h1>
+    <span class="seal">天 津 道 台 沙 盘</span>
+    <p style="color:#f0e0b0;font-size:14px;letter-spacing:2px;margin:4px 0 8px;">守一方水土 · 理百业民生</p>
+    <button class="btn" id="btn-start-new">开 始 游 戏</button>
+    <button class="btn ghost" id="btn-start-continue" style="display:none;">继 续 游 戏</button>
+    <p class="hint">回合制 · 一回合一月 · 每月四行动点</p>
+  </div>
+</div>
+
+<!-- ======================= 游戏主界面 ======================= -->
 <div id="game">
   <div id="topbar">
     <span class="t-title">津门治略</span>
     <span class="t-info" id="top-date"></span>
+    <button id="btn-sound">音效：开</button>
     <button id="btn-save-home">存 档 · 首页</button>
   </div>
   <div id="main">
@@ -212,12 +347,26 @@ button, .attr-cell { -webkit-touch-callout: none; }
   </div>
 </div>
 
-<!-- ======================= 事件弹窗（浮层，右对齐） ======================= -->
-<div class="modal-mask" id="event-mask">
-  <div class="modal">
+<!-- ======================= 全屏事件页（场景卡 + 描述 + 选项） ======================= -->
+<div id="event-screen">
+  <div class="ev-head">
+    <span class="tag" id="event-tag">事件</span>
     <h3 id="event-title"></h3>
-    <p class="desc" id="event-desc"></p>
-    <div id="event-options"></div>
+  </div>
+  <div id="event-scene">
+    <span class="zi" id="event-zi"></span>
+    <span class="sub" id="event-sub"></span>
+  </div>
+  <p class="ev-desc" id="event-desc"></p>
+  <div class="ev-opts" id="event-options"></div>
+</div>
+
+<!-- ======================= 事件弹窗（浮层，右对齐，保留兼容） ======================= -->
+<div class="modal-mask" id="event-mask" style="display:none;">
+  <div class="modal">
+    <h3 id="event-title-legacy"></h3>
+    <p class="desc" id="event-desc-legacy"></p>
+    <div id="event-options-legacy"></div>
   </div>
 </div>
 
@@ -253,6 +402,43 @@ button, .attr-cell { -webkit-touch-callout: none; }
  * 0. 工具与存储
  * ===================================================================== */
 function $(id) { return document.getElementById(id); }
+
+/* ---------- 程序化音效（Web Audio 合成，无需音频文件） ---------- */
+var SOUND = {
+  enabled: true,
+  ctx: null,
+  ensure: function () {
+    // 惰性创建 AudioContext（需在用户手势后，移动端自动播放限制）
+    if (!this.ctx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) this.ctx = new AC();
+    }
+    if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
+  },
+  /* 播放一个短音：type 波形，freq 频率，dur 时长（秒），gain 音量 */
+  tone: function (type, freq, dur, gain) {
+    if (!this.enabled) return;
+    this.ensure();
+    if (!this.ctx) return;
+    var t = this.ctx.currentTime;
+    var osc = this.ctx.createOscillator();
+    var g = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    // 快速淡入淡出，避免爆音
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain || 0.2, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g); g.connect(this.ctx.destination);
+    osc.start(t); osc.stop(t + dur + 0.02);
+  },
+  click: function () { this.tone("square", 600, 0.06, 0.12); },   // 按钮点击
+  action: function () { this.tone("triangle", 440, 0.12, 0.18); this.tone("triangle", 660, 0.10, 0.10); }, // 执行行动
+  event: function () { this.tone("sine", 220, 0.20, 0.22); this.tone("sine", 330, 0.18, 0.15); },          // 事件弹出
+  ending: function () { this.tone("sine", 196, 0.5, 0.25); this.tone("sine", 294, 0.6, 0.2); },            // 结局钟鸣
+  good: function () { this.tone("triangle", 523, 0.10, 0.14); this.tone("triangle", 784, 0.12, 0.10); },   // 增益
+  bad: function () { this.tone("sawtooth", 180, 0.16, 0.12); }                                             // 减益
+};
 
 var SAVE_KEY = "jinmen_save_v1";
 
@@ -483,6 +669,48 @@ var EVENTS = [
       { t:"划区分办，由官府逐旬抽查", f:"库银-200·仓粮-300·民望+5·治安+2", e:{kuyin:-200,cangliang:-300,minwang:5,zhian:2} } ] }
 ];
 
+/* =====================================================================
+ * 事件场景主题：为每个事件分配"场景卡"——主题字 + 底色 + 副题，
+ * 用于全屏事件页的场景图区（纯 CSS 色块，零图片素材）。
+ * ===================================================================== */
+var EVENT_THEMES = {
+  TJ001: { zi:"汛", sub:"海河伏汛", c1:"#2b5a7a", c2:"#123c56" },   // 河防
+  TJ002: { zi:"漕", sub:"漕运三岔口", c1:"#6b5a32", c2:"#3c311a" }, // 漕运
+  TJ003: { zi:"盐", sub:"盐商请托", c1:"#8a6a2a", c2:"#4a3712" },   // 盐务
+  TJ004: { zi:"争", sub:"脚行争埠", c1:"#7a4a2a", c2:"#3f2412" },   // 治安
+  TJ005: { zi:"界", sub:"租界越界", c1:"#5a4a6a", c2:"#2a2340" },   // 租界
+  TJ006: { zi:"械", sub:"机器局爆裂", c1:"#4a4a5a", c2:"#20202e" }, // 洋务
+  TJ007: { zi:"疫", sub:"庙会时疫", c1:"#7a3a3a", c2:"#3f1a1a" },   // 时疫
+  TJ008: { zi:"流", sub:"流民北仓", c1:"#6a6a4a", c2:"#333322" },   // 民生
+  TJ009: { zi:"蠹", sub:"书吏侵蚀", c1:"#5a3a5a", c2:"#2a1a2a" },   // 吏治
+  TJ010: { zi:"坝", sub:"乡绅捐坝", c1:"#3a6a5a", c2:"#1a3a30" },   // 河防
+  TJ011: { zi:"凌", sub:"凌汛阻航", c1:"#3a5a7a", c2:"#16283f" },   // 河防
+  TJ012: { zi:"霉", sub:"漕仓霉粮", c1:"#6a5a3a", c2:"#332a16" },   // 漕运
+  TJ013: { zi:"火", sub:"盐坨大火", c1:"#a04a20", c2:"#5a1e08" },   // 治安
+  TJ014: { zi:"船", sub:"洋船碰船", c1:"#4a5a6a", c2:"#1e2a38" },   // 租界
+  TJ015: { zi:"考", sub:"机器局招考", c1:"#4a4a5a", c2:"#20202e" }, // 洋务
+  TJ016: { zi:"电", sub:"电杆妈祖庙", c1:"#5a6a3a", c2:"#283216" }, // 洋务
+  TJ017: { zi:"逃", sub:"民夫逃散", c1:"#6a4a2a", c2:"#33210f" },   // 河防
+  TJ018: { zi:"赌", sub:"胥吏包赌", c1:"#5a3a2a", c2:"#2a160f" },   // 吏治
+  TJ019: { zi:"饷", sub:"营勇催饷", c1:"#7a3a2a", c2:"#3f1a10" },   // 治安
+  TJ020: { zi:"善", sub:"善堂争赈", c1:"#3a5a4a", c2:"#16281f" }    // 民生
+};
+
+/* 依据选项效果判断音效：只看"成效类"属性净变化（民望/治安/河防/洋务/租界/清廉），
+ * 库银/仓粮的增减属资源投入，不影响音效倾向。净正→good，净负→bad，持平→action */
+function optionSound(effect) {
+  var pos = 0, neg = 0;
+  var OUTCOMES = { minwang:1, zhian:1, hefang:1, yangwu:1, zujie:1, qinglian:1 };
+  for (var k in effect) {
+    if (!OUTCOMES[k]) continue;
+    if (effect[k] > 0) pos += effect[k];
+    else if (effect[k] < 0) neg += -effect[k];
+  }
+  if (pos > neg) return "good";
+  if (neg > pos) return "bad";
+  return "action";
+}
+
 /* 结局：5 条（原既定设定的占位，可替换） */
 var ENDINGS = [
   { id:"E1", title:"库银破产 · 亏空难支",
@@ -641,8 +869,9 @@ function newGame() {
   clearLastDiff();
   $("log").innerHTML = "";
   addLog("光绪二十二年二月，你奉旨就任天津道台。");
+  $("start-screen").style.display = "none"; // 关闭封面
   $("game").style.display = "grid";
-  updateOrientation(); // 横竖屏皆由 CSS 保证横向三栏呈现
+  updateOrientation();
   renderAll();
   autosave();
 }
@@ -656,6 +885,7 @@ function resumeGame() {
     clearLastDiff();
     $("log").innerHTML = "";
     addLog("已读取存档，继续治理津门……");
+    $("start-screen").style.display = "none";
     $("game").style.display = "grid";
     updateOrientation();
     renderAll();
@@ -686,6 +916,7 @@ function doAction(actionId) {
   });
   var msg = "【" + a.label + "】" + (parts.length ? "　" + parts.join("，") : "");
   addLog(msg);
+  SOUND.action(); // 行动音效
 
   // 行动后判定结局
   if (checkEnding()) { renderAll(); return; }
@@ -735,8 +966,17 @@ function triggerRandomEvent() {
 }
 
 function showEventModal(ev) {
+  // 全屏事件页渲染
+  var theme = EVENT_THEMES[ev.id] || { zi:"事", sub:"津门政事", c1:"#4a4a4a", c2:"#222" };
+  $("event-tag").textContent = "津 门 政 事";
   $("event-title").textContent = ev.title;
+  $("event-zi").textContent = theme.zi;
+  $("event-sub").textContent = theme.sub;
+  // 场景卡底色渐变
+  $("event-scene").style.background =
+    "linear-gradient(160deg, " + theme.c1 + " 0%, " + theme.c2 + " 100%)";
   $("event-desc").textContent = ev.desc;
+
   var box = $("event-options");
   box.innerHTML = "";
   ev.opts.forEach(function (opt, idx) {
@@ -752,7 +992,9 @@ function showEventModal(ev) {
         if (k in ATTRS) parts.push(ATTRS[k].name + (opt.e[k] >= 0 ? "+" : "") + opt.e[k]);
       });
       addLog("事件·" + ev.title + "：选「" + opt.t + "」" + (parts.length ? "　" + parts.join("，") : ""));
-      $("event-mask").style.display = "none";
+      // 按选项倾向播放差异化音效
+      SOUND[optionSound(opt.e)]();
+      $("event-screen").style.display = "none";
       renderAll();
       autosave();
       if (checkEnding()) return;
@@ -762,14 +1004,14 @@ function showEventModal(ev) {
         if (again.length) {
           eventChainDepth += 1;
           showEventModal(again[Math.floor(Math.random() * again.length)]);
-        } else {
-          // 无更多事件且横屏，隐藏右栏占位提示
         }
       }
     });
     box.appendChild(b);
   });
-  $("event-mask").style.display = "flex";
+
+  SOUND.event(); // 事件弹出音效
+  $("event-screen").style.display = "flex";
 }
 
 /* 结局 */
@@ -781,8 +1023,10 @@ function checkEnding() {
         endingActive = true;
         $("end-title").textContent = "—— 结局：" + e.title + " ——";
         $("end-desc").textContent = e.desc;
+        $("event-screen").style.display = "none";
         $("event-mask").style.display = "none";
         $("end-mask").style.display = "flex";
+        SOUND.ending(); // 结局钟鸣音效
         clearSave(); // 结局后清除存档，避免读档回到已结束局面
         renderAll();
         return true;
@@ -793,6 +1037,7 @@ function checkEnding() {
 }
 
 function closeAllModals() {
+  var evs = $("event-screen"); if (evs) evs.style.display = "none";
   var evm = $("event-mask"); if (evm) evm.style.display = "none";
   var endm = $("end-mask"); if (endm) endm.style.display = "none";
 }
@@ -805,13 +1050,31 @@ function autosave() { if (gameState) saveGame(gameState); }
 function init() {
   setupTouch();
 
-  // 顶部"存档·首页"按钮：存档后回到游戏起始（重新开局/读档入口）
+  // 起始页：开始游戏 / 继续游戏
+  $("btn-start-new").addEventListener("click", function () {
+    SOUND.click();
+    newGame();
+  });
+  $("btn-start-continue").addEventListener("click", function () {
+    SOUND.click();
+    resumeGame();
+  });
+
+  // 音效开关
+  $("btn-sound").addEventListener("click", function () {
+    SOUND.enabled = !SOUND.enabled;
+    $("btn-sound").textContent = "音效：" + (SOUND.enabled ? "开" : "关");
+    if (SOUND.enabled) SOUND.click();
+  });
+
+  // 顶部"存档·首页"按钮：存档后回到起始页
   $("btn-save-home").addEventListener("click", function () {
     if (gameState && !endingActive) saveGame(gameState);
+    SOUND.click();
     closeAllModals();
-    // 无独立首页：存档后保持游戏界面，仅重置为一局新入口（读档继续）
+    $("game").style.display = "none";
     gameState = null;
-    resumeGame();
+    showStartScreen();
   });
 
   // 结局弹窗按钮
@@ -821,8 +1084,9 @@ function init() {
   });
   $("end-home").addEventListener("click", function () {
     $("end-mask").style.display = "none";
+    $("game").style.display = "none";
     gameState = null;
-    resumeGame(); // 返回"首页"= 读档继续
+    showStartScreen();
   });
 
   // 方向检测：加载时 + 旋转/缩放时
@@ -830,8 +1094,15 @@ function init() {
   window.addEventListener("orientationchange", function () { setTimeout(updateOrientation, 100); });
   updateOrientation();
 
-  // 扫码即玩：进入页面立即读档（无档则自动开局）
-  resumeGame();
+  // 进入即显示起始页（封面），等待用户选择开始/继续
+  showStartScreen();
+}
+
+/* 显示起始页：根据是否存在存档决定"继续游戏"是否可见 */
+function showStartScreen() {
+  var s = loadGame();
+  $("btn-start-continue").style.display = s ? "block" : "none";
+  $("start-screen").style.display = "flex";
 }
 
 window.addEventListener("DOMContentLoaded", init);
