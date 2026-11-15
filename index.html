@@ -30,33 +30,6 @@ body.selectable, body.selectable * { -webkit-user-select: text; user-select: tex
 button, .attr-cell { -webkit-touch-callout: none; }
 
 /* =====================================================================
- * 竖屏提示：改为顶部轻量横幅（可关闭），不再全屏遮挡游戏
- * 默认隐藏；仅当竖屏且未开局时显示引导，竖屏开局后显示顶部提示条
- * ===================================================================== */
-#orientation-layer {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
-  display: none;
-  background: #4a3f2a; color: #f3ecd8;
-  padding: 8px 14px; font-size: 13px;
-  align-items: center; justify-content: space-between; gap: 10px;
-}
-#orientation-layer .msg { flex: 1; text-align: left; }
-#orientation-layer .close { background: none; border: none; color: #f3ecd8; font-size: 18px; padding: 0 6px; cursor: pointer; line-height: 1; }
-/* 首次进入的全屏引导层（竖屏、未开局时）：展示标题与"开始"按钮 */
-#intro-layer {
-  position: fixed; inset: 0; z-index: 9997;
-  display: flex; align-items: center; justify-content: center;
-  text-align: center; padding: 40px; background: #efe7d3;
-}
-#intro-layer .box { max-width: 320px; }
-#intro-layer h1 { font-size: 30px; margin: 0 0 12px; letter-spacing: 3px; }
-#intro-layer p { font-size: 15px; color: #7a6a49; }
-#intro-layer button {
-  margin-top: 16px; padding: 12px 36px; font-size: 17px; font-family: inherit;
-  background: #4a3f2a; color: #f3ecd8; border: 1px solid #4a3f2a; border-radius: 8px; cursor: pointer;
-}
-
-/* =====================================================================
  * 主游戏容器：仅在横屏且已开局时显示
  * 使用固定全屏，Grid 三栏：左属性 | 中行动 | 右弹窗区
  * 靠 media query (orientation: landscape) + JS 双重保证
@@ -183,39 +156,29 @@ button, .attr-cell { -webkit-touch-callout: none; }
  *  - 竖屏：改为纵向堆叠，允许上下滚动，游戏照常可玩
  * 竖屏时不再强制隐藏游戏，只由 JS 显示一条轻量提示条（可关闭）。
  * ===================================================================== */
+/* =====================================================================
+ * 响应式适配：任何方向都呈现"横屏三栏"游戏画面
+ *  - 横屏：三栏并排（属性 | 行动 | 弹窗区），正常显示
+ *  - 竖屏：将游戏界面旋转 90° 横铺，用户竖持手机也能看到横向三栏，
+ *          无需手动旋转手机、无提示、无引导页，扫码即玩。
+ * ===================================================================== */
 @media (orientation: portrait) {
   #game {
-    grid-template-rows: auto minmax(0, 1fr);  /* topbar 固定，主区可滚动 */
+    width: 100vh;      /* 竖屏时以短边为"高"、长边为"宽" */
+    height: 100vw;
+    transform: rotate(90deg);
+    transform-origin: center center;
+    position: fixed;
+    top: 50%; left: 50%;
+    margin-left: -50vh;  /* 旋转后居中校正 */
+    margin-top: -50vw;
   }
-  #main {
-    grid-template-columns: 1fr;      /* 竖屏改为单列堆叠 */
-    overflow-y: auto;
-  }
-  .col { overflow: visible; }
-  #col-left, #col-mid { overflow: visible; }
-  .modal { max-width: 100%; }
 }
 </style>
 </head>
 <body>
 
-<!-- ======================= 首次进入引导层（开局入口） ======================= -->
-<div id="intro-layer">
-  <div class="box">
-    <h1>津 门 治 略</h1>
-    <p>光绪二十二年 · 天津道台 · 回合制沙盘</p>
-    <p style="font-size:13px;color:#9a8a62;">横屏体验更佳，竖屏亦可游玩</p>
-    <button id="intro-start">开始治理津门</button>
-  </div>
-</div>
-
-<!-- ======================= 竖屏顶部提示条（可关闭，不遮挡游戏） ======================= -->
-<div id="orientation-layer">
-  <span class="msg" id="orientation-text">建议将手机横向放置，体验更佳</span>
-  <button class="close" id="orientation-close">×</button>
-</div>
-
-<!-- ======================= 游戏主界面 ======================= -->
+<!-- ======================= 游戏主界面（扫码即自动进入，无引导页无竖屏提示） ======================= -->
 <div id="game">
   <div id="topbar">
     <span class="t-title">津门治略</span>
@@ -559,15 +522,8 @@ function initialState() {
 var landscape = true; // 当前是否横屏
 function updateOrientation() {
   landscape = window.innerWidth >= window.innerHeight;
-  var ol = $("orientation-layer");
-  // 游戏始终显示（只要已开局），不再因竖屏隐藏
+  // 游戏始终显示（只要已开局）；竖屏由 CSS 旋转横铺，无需提示
   if (gameState) { $("game").style.display = "grid"; }
-  // 顶部提示条：仅在竖屏时显示（若用户尚未手动关闭）
-  if (!landscape) {
-    if (ol._dismissed !== true) ol.style.display = "flex";
-  } else {
-    ol.style.display = "none";
-  }
 }
 
 /* 触控：禁止双击缩放（配合 meta 双保险）、阻止双击/长按高亮选择 */
@@ -685,9 +641,8 @@ function newGame() {
   clearLastDiff();
   $("log").innerHTML = "";
   addLog("光绪二十二年二月，你奉旨就任天津道台。");
-  $("intro-layer").style.display = "none"; // 隐藏引导层
   $("game").style.display = "grid";
-  updateOrientation(); // 竖屏显示提示条，横屏隐藏
+  updateOrientation(); // 横竖屏皆由 CSS 保证横向三栏呈现
   renderAll();
   autosave();
 }
@@ -850,26 +805,13 @@ function autosave() { if (gameState) saveGame(gameState); }
 function init() {
   setupTouch();
 
-  // 首次进入：intro 层"开始治理津门" -> 有存档则续档，否则开局
-  $("intro-start").addEventListener("click", function () {
-    $("intro-layer").style.display = "none";
-    resumeGame();
-  });
-
-  // 竖屏提示条关闭按钮
-  $("orientation-close").addEventListener("click", function () {
-    $("orientation-layer").style.display = "none";
-    $("orientation-layer")._dismissed = true; // 本会话内不再自动弹出
-  });
-
-  // 顶部"存档·首页"按钮：存档后回到 intro 首页
+  // 顶部"存档·首页"按钮：存档后回到游戏起始（重新开局/读档入口）
   $("btn-save-home").addEventListener("click", function () {
     if (gameState && !endingActive) saveGame(gameState);
     closeAllModals();
-    $("game").style.display = "none";
-    $("orientation-layer").style.display = "none";
-    $("intro-layer").style.display = "flex";
+    // 无独立首页：存档后保持游戏界面，仅重置为一局新入口（读档继续）
     gameState = null;
+    resumeGame();
   });
 
   // 结局弹窗按钮
@@ -879,16 +821,17 @@ function init() {
   });
   $("end-home").addEventListener("click", function () {
     $("end-mask").style.display = "none";
-    $("game").style.display = "none";
-    $("orientation-layer").style.display = "none";
-    $("intro-layer").style.display = "flex";
     gameState = null;
+    resumeGame(); // 返回"首页"= 读档继续
   });
 
   // 方向检测：加载时 + 旋转/缩放时
   window.addEventListener("resize", updateOrientation);
   window.addEventListener("orientationchange", function () { setTimeout(updateOrientation, 100); });
   updateOrientation();
+
+  // 扫码即玩：进入页面立即读档（无档则自动开局）
+  resumeGame();
 }
 
 window.addEventListener("DOMContentLoaded", init);
