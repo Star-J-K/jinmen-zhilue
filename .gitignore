@@ -1,5 +1,7 @@
 qr_*.png
 _*.js
 *.py
-
 .workbuddy/
+images_preview/
+output/
+提示词一键复制.html
